@@ -37,7 +37,7 @@ struct AccelerationStructure {
 #define INDEX_MISS_GROUP 1
 #define INDEX_CLOSEST_HIT_GROUP 2
 
-class VulkanExample : public VulkanExampleBase
+class VulkanExample : public VulkanRaytracer
 {
 public:
 	PFN_vkGetBufferDeviceAddressKHR vkGetBufferDeviceAddressKHR;
@@ -85,7 +85,7 @@ public:
 	VkDescriptorSet descriptorSet;
 	VkDescriptorSetLayout descriptorSetLayout;
 
-	VulkanExample() : VulkanExampleBase()
+	VulkanExample() : VulkanRaytracer()
 	{
 		title = "Ray tracing basic";
 		settings.overlay = true;
@@ -839,7 +839,7 @@ public:
 
 	void prepare()
 	{
-		VulkanExampleBase::prepare();
+		VulkanRaytracer::prepare();
 
 		// Query the ray tracing properties of the current implementation, we will need them later on
 		rayTracingProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_KHR;
@@ -883,11 +883,11 @@ public:
 
 	void draw()
 	{
-		VulkanExampleBase::prepareFrame();
+		prepareFrame();
 		submitInfo.commandBufferCount = 1;
 		submitInfo.pCommandBuffers = &drawCmdBuffers[currentBuffer];
 		VK_CHECK_RESULT(vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE));
-		VulkanExampleBase::submitFrame();
+		submitFrame();
 	}
 
 	virtual void render()

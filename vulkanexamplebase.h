@@ -38,7 +38,7 @@
 #include "camera.hpp"
 #include "benchmark.hpp"
 
-class VulkanExampleBase
+class VulkanRaytracer
 {
 private:
 	std::string getWindowTitle();
@@ -186,8 +186,8 @@ public:
 
 	GLFWwindow* window;
 
-	VulkanExampleBase(bool enableValidation = false);
-	virtual ~VulkanExampleBase();
+	VulkanRaytracer(bool enableValidation = false);
+	virtual ~VulkanRaytracer();
 	/** @brief Setup the vulkan instance, enable required extensions and connect to the physical device (GPU) */
 	bool initVulkan();
 
@@ -241,13 +241,13 @@ public:
 	//virtual void OnUpdateUIOverlay(vks::UIOverlay *overlay);
 
 	static void framebufferResizeCallback(GLFWwindow* window, int width, int height) {
-		auto app = reinterpret_cast<VulkanExampleBase*>(glfwGetWindowUserPointer(window));
+		auto app = reinterpret_cast<VulkanRaytracer*>(glfwGetWindowUserPointer(window));
 		app->resizing = true;
 	}
 
 	static void cursorPositionCallback(GLFWwindow* window, double x, double y)
 	{
-		auto app = reinterpret_cast<VulkanExampleBase*>(glfwGetWindowUserPointer(window));
+		auto app = reinterpret_cast<VulkanRaytracer*>(glfwGetWindowUserPointer(window));
 
 		int32_t dx = (int32_t)app->mousePos.x - x;
 		int32_t dy = (int32_t)app->mousePos.y - y;
@@ -269,7 +269,7 @@ public:
 
 	static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 	{
-		auto app = reinterpret_cast<VulkanExampleBase*>(glfwGetWindowUserPointer(window));
+		auto app = reinterpret_cast<VulkanRaytracer*>(glfwGetWindowUserPointer(window));
 
 		if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS)
 			app->mouseButtons.left = true;

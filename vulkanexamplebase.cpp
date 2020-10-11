@@ -1,9 +1,9 @@
 #include "vulkanexamplebase.h"
 
 
-std::vector<const char*> VulkanExampleBase::args;
+std::vector<const char*> VulkanRaytracer::args;
 
-VkResult VulkanExampleBase::createInstance(bool enableValidation)
+VkResult VulkanRaytracer::createInstance(bool enableValidation)
 {
 	this->settings.validation = enableValidation;
 
@@ -101,16 +101,16 @@ VkResult VulkanExampleBase::createInstance(bool enableValidation)
 	return vkCreateInstance(&instanceCreateInfo, nullptr, &instance);
 }
 
-void VulkanExampleBase::renderFrame()
+void VulkanRaytracer::renderFrame()
 {
-	VulkanExampleBase::prepareFrame();
+	prepareFrame();
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &drawCmdBuffers[currentBuffer];
 	VK_CHECK_RESULT(vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE));
-	VulkanExampleBase::submitFrame();
+	submitFrame();
 }
 
-std::string VulkanExampleBase::getWindowTitle()
+std::string VulkanRaytracer::getWindowTitle()
 {
 	std::string device(deviceProperties.deviceName);
 	std::string windowTitle;
@@ -121,7 +121,7 @@ std::string VulkanExampleBase::getWindowTitle()
 	return windowTitle;
 }
 
-void VulkanExampleBase::createCommandBuffers()
+void VulkanRaytracer::createCommandBuffers()
 {
 	// Create one command buffer for each swap chain image and reuse for rendering
 	drawCmdBuffers.resize(swapChain.imageCount);
@@ -135,24 +135,24 @@ void VulkanExampleBase::createCommandBuffers()
 	VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &cmdBufAllocateInfo, drawCmdBuffers.data()));
 }
 
-void VulkanExampleBase::destroyCommandBuffers()
+void VulkanRaytracer::destroyCommandBuffers()
 {
 	vkFreeCommandBuffers(device, cmdPool, static_cast<uint32_t>(drawCmdBuffers.size()), drawCmdBuffers.data());
 }
 
-std::string VulkanExampleBase::getShadersPath() const
+std::string VulkanRaytracer::getShadersPath() const
 {
 	return getAssetPath() + "shaders/" + shaderDir + "/";
 }
 
-void VulkanExampleBase::createPipelineCache()
+void VulkanRaytracer::createPipelineCache()
 {
 	VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {};
 	pipelineCacheCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
 	VK_CHECK_RESULT(vkCreatePipelineCache(device, &pipelineCacheCreateInfo, nullptr, &pipelineCache));
 }
 
-void VulkanExampleBase::prepare()
+void VulkanRaytracer::prepare()
 {
 	if (vulkanDevice->enableDebugMarkers) {
 		vks::debugmarker::setup(device);
@@ -166,20 +166,9 @@ void VulkanExampleBase::prepare()
 	setupRenderPass();
 	createPipelineCache();
 	setupFrameBuffer();
-	settings.overlay = settings.overlay && (!benchmark.active);
-	//if (settings.overlay) {
-	//	UIOverlay.device = vulkanDevice;
-	//	UIOverlay.queue = queue;
-	//	UIOverlay.shaders = {
-	//		loadShader(getShadersPath() + "base/uioverlay.vert.spv", VK_SHADER_STAGE_VERTEX_BIT),
-	//		loadShader(getShadersPath() + "base/uioverlay.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT),
-	//	};
-	//	UIOverlay.prepareResources();
-	//	UIOverlay.preparePipeline(pipelineCache, renderPass);
-	//}
 }
 
-VkPipelineShaderStageCreateInfo VulkanExampleBase::loadShader(std::string fileName, VkShaderStageFlagBits stage)
+VkPipelineShaderStageCreateInfo VulkanRaytracer::loadShader(std::string fileName, VkShaderStageFlagBits stage)
 {
 	VkPipelineShaderStageCreateInfo shaderStage = {};
 	shaderStage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -191,7 +180,7 @@ VkPipelineShaderStageCreateInfo VulkanExampleBase::loadShader(std::string fileNa
 	return shaderStage;
 }
 
-void VulkanExampleBase::nextFrame()
+void VulkanRaytracer::nextFrame()
 {
 	auto tStart = std::chrono::high_resolution_clock::now();
 	if (viewUpdated)
@@ -230,7 +219,7 @@ void VulkanExampleBase::nextFrame()
 	updateOverlay();
 }
 
-void VulkanExampleBase::renderLoop()
+void VulkanRaytracer::renderLoop()
 {
 	if (benchmark.active) {
 		benchmark.run([=] { render(); }, vulkanDevice->properties);
@@ -259,43 +248,15 @@ void VulkanExampleBase::renderLoop()
 	}
 }
 
-void VulkanExampleBase::updateOverlay()
+void VulkanRaytracer::updateOverlay()
 {
 	if (!settings.overlay)
 		return;
 
-	//ImGuiIO& io = ImGui::GetIO();
-
-	//io.DisplaySize = ImVec2((float)width, (float)height);
-	//io.DeltaTime = frameTimer;
-
-	//io.MousePos = ImVec2(mousePos.x, mousePos.y);
-	//io.MouseDown[0] = mouseButtons.left;
-	//io.MouseDown[1] = mouseButtons.right;
-
-	//ImGui::NewFrame();
-
-	//ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
-	//ImGui::SetNextWindowPos(ImVec2(10, 10));
-	//ImGui::SetNextWindowSize(ImVec2(0, 0), ImGuiSetCond_FirstUseEver);
-	//ImGui::Begin("Vulkan Example", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
-	//ImGui::TextUnformatted(title.c_str());
-	//ImGui::TextUnformatted(deviceProperties.deviceName);
-	//ImGui::Text("%.2f ms/frame (%.1d fps)", (1000.0f / lastFPS), lastFPS);
-	//ImGui::PushItemWidth(110.0f * UIOverlay.scale);
-	//OnUpdateUIOverlay(&UIOverlay);
-	//ImGui::PopItemWidth();
-	//ImGui::End();
-	//ImGui::PopStyleVar();
-	//ImGui::Render();
-
-	//if (UIOverlay.update() || UIOverlay.updated) {
-		buildCommandBuffers();
-		//UIOverlay.updated = false;
-	//}
+	buildCommandBuffers();
 }
 
-void VulkanExampleBase::drawUI(const VkCommandBuffer commandBuffer)
+void VulkanRaytracer::drawUI(const VkCommandBuffer commandBuffer)
 {
 	//if (settings.overlay) {
 	//	const VkViewport viewport = vks::initializers::viewport((float)width, (float)height, 0.0f, 1.0f);
@@ -307,7 +268,7 @@ void VulkanExampleBase::drawUI(const VkCommandBuffer commandBuffer)
 	//}
 }
 
-void VulkanExampleBase::prepareFrame()
+void VulkanRaytracer::prepareFrame()
 {
 	// Acquire the next image from the swap chain
 	VkResult result = swapChain.acquireNextImage(semaphores.presentComplete, &currentBuffer);
@@ -320,7 +281,7 @@ void VulkanExampleBase::prepareFrame()
 	}
 }
 
-void VulkanExampleBase::submitFrame()
+void VulkanRaytracer::submitFrame()
 {
 	VkResult result = swapChain.queuePresent(queue, currentBuffer, semaphores.renderComplete);
 	if (!((result == VK_SUCCESS) || (result == VK_SUBOPTIMAL_KHR))) {
@@ -335,7 +296,7 @@ void VulkanExampleBase::submitFrame()
 	VK_CHECK_RESULT(vkQueueWaitIdle(queue));
 }
 
-VulkanExampleBase::VulkanExampleBase(bool enableValidation)
+VulkanRaytracer::VulkanRaytracer(bool enableValidation)
 {
 	// Check for a valid asset path
 	//struct stat info;
@@ -436,7 +397,7 @@ VulkanExampleBase::VulkanExampleBase(bool enableValidation)
 	//setupDPIAwareness();
 }
 
-VulkanExampleBase::~VulkanExampleBase()
+VulkanRaytracer::~VulkanRaytracer()
 {
 	// Clean up Vulkan resources
 	swapChain.cleanup();
@@ -486,7 +447,7 @@ VulkanExampleBase::~VulkanExampleBase()
 	glfwTerminate();
 }
 
-bool VulkanExampleBase::initVulkan()
+bool VulkanRaytracer::initVulkan()
 {
 	VkResult err;
 
@@ -629,7 +590,7 @@ bool VulkanExampleBase::initVulkan()
 }
 
 // Win32 : Sets up a console window and redirects standard output to it
-void VulkanExampleBase::setupConsole(std::string title)
+void VulkanRaytracer::setupConsole(std::string title)
 {
 	AllocConsole();
 	AttachConsole(GetCurrentProcessId());
@@ -639,7 +600,7 @@ void VulkanExampleBase::setupConsole(std::string title)
 	SetConsoleTitle(TEXT(title.c_str()));
 }
 
-void VulkanExampleBase::setupWindow()
+void VulkanRaytracer::setupWindow()
 {
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
@@ -779,15 +740,15 @@ void VulkanExampleBase::setupWindow()
 //	}
 //}
 
-void VulkanExampleBase::viewChanged() {}
+void VulkanRaytracer::viewChanged() {}
 
-void VulkanExampleBase::keyPressed(uint32_t) {}
+void VulkanRaytracer::keyPressed(uint32_t) {}
 
-void VulkanExampleBase::mouseMoved(double x, double y, bool & handled) {}
+void VulkanRaytracer::mouseMoved(double x, double y, bool & handled) {}
 
-void VulkanExampleBase::buildCommandBuffers() {}
+void VulkanRaytracer::buildCommandBuffers() {}
 
-void VulkanExampleBase::createSynchronizationPrimitives()
+void VulkanRaytracer::createSynchronizationPrimitives()
 {
 	// Wait fences to sync command buffer access
 	VkFenceCreateInfo fenceCreateInfo = vks::initializers::fenceCreateInfo(VK_FENCE_CREATE_SIGNALED_BIT);
@@ -797,7 +758,7 @@ void VulkanExampleBase::createSynchronizationPrimitives()
 	}
 }
 
-void VulkanExampleBase::createCommandPool()
+void VulkanRaytracer::createCommandPool()
 {
 	VkCommandPoolCreateInfo cmdPoolInfo = {};
 	cmdPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -807,7 +768,7 @@ void VulkanExampleBase::createCommandPool()
 	VK_CHECK_RESULT(vkCreateCommandPool(device, &cmdPoolInfo, nullptr, &cmdPool));
 }
 
-void VulkanExampleBase::setupDepthStencil()
+void VulkanRaytracer::setupDepthStencil()
 {
 	VkImageCreateInfo imageCI{};
 	imageCI.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -848,7 +809,7 @@ void VulkanExampleBase::setupDepthStencil()
 	VK_CHECK_RESULT(vkCreateImageView(device, &imageViewCI, nullptr, &depthStencil.view));
 }
 
-void VulkanExampleBase::setupFrameBuffer()
+void VulkanRaytracer::setupFrameBuffer()
 {
 	VkImageView attachments[2];
 
@@ -874,7 +835,7 @@ void VulkanExampleBase::setupFrameBuffer()
 	}
 }
 
-void VulkanExampleBase::setupRenderPass()
+void VulkanRaytracer::setupRenderPass()
 {
 	std::array<VkAttachmentDescription, 2> attachments = {};
 	// Color attachment
@@ -946,9 +907,9 @@ void VulkanExampleBase::setupRenderPass()
 	VK_CHECK_RESULT(vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass));
 }
 
-void VulkanExampleBase::getEnabledFeatures() {}
+void VulkanRaytracer::getEnabledFeatures() {}
 
-void VulkanExampleBase::windowResize()
+void VulkanRaytracer::windowResize()
 {
 	if (!prepared)
 	{
@@ -1033,16 +994,14 @@ void VulkanExampleBase::windowResize()
 //	mousePos = glm::vec2((float)x, (float)y);
 //}
 
-void VulkanExampleBase::windowResized() {}
+void VulkanRaytracer::windowResized() {}
 
-void VulkanExampleBase::initSwapchain()
+void VulkanRaytracer::initSwapchain()
 {
 	swapChain.initSurface(window);
 }
 
-void VulkanExampleBase::setupSwapChain()
+void VulkanRaytracer::setupSwapChain()
 {
 	swapChain.create(&width, &height, settings.vsync);
 }
-
-//void VulkanExampleBase::OnUpdateUIOverlay(vks::UIOverlay *overlay) {}

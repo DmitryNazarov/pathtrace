@@ -900,7 +900,6 @@ public:
 	}
 };
 
-//VULKAN_EXAMPLE_MAIN()
 int main() {
 	VulkanExample* vulkanExample = nullptr;
 	try {

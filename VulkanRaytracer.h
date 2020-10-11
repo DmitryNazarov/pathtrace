@@ -145,7 +145,6 @@ private:
 	static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 
 private:
-	std::string getWindowTitle();
 	bool viewUpdated = false;
 	uint32_t destWidth;
 	uint32_t destHeight;
@@ -153,7 +152,6 @@ private:
 	void windowResize();
 	//void handleMouseMove(int32_t x, int32_t y);
 	void nextFrame();
-	void updateOverlay();
 	void createPipelineCache();
 	void createCommandPool();
 	void createSynchronizationPrimitives();
@@ -290,8 +288,6 @@ private:
 		bool fullscreen = false;
 		/** @brief Set to true if v-sync will be forced for the swapchain */
 		bool vsync = false;
-		/** @brief Enable UI overlay */
-		bool overlay = false;
 	} settings;
 
 	VkClearColorValue defaultClearColor = { { 0.025f, 0.025f, 0.025f, 1.0f } };
@@ -306,9 +302,7 @@ private:
 	Camera camera;
 	glm::vec2 mousePos;
 
-	std::string title = "Vulkan Example";
-	std::string name = "vulkanExample";
-	uint32_t apiVersion = VK_API_VERSION_1_0;
+	std::string applicationName = "Raytracer";
 
 	struct {
 		VkImage image;

@@ -3,24 +3,17 @@
 
 VkResult VulkanRaytracer::createInstance(bool enableValidation)
 {
-	this->settings.validation = enableValidation;
-
-	// Validation can also be forced via a define
-#if defined(_VALIDATION)
-	this->settings.validation = true;
-#endif
-
 	VkApplicationInfo appInfo = {};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	appInfo.pApplicationName = name.c_str();
-	appInfo.pEngineName = name.c_str();
-	appInfo.apiVersion = apiVersion;
+	appInfo.pApplicationName = applicationName.c_str();
+	appInfo.pEngineName = applicationName.c_str();
+	// We require Vulkan 1.2 for ray tracing
+	appInfo.apiVersion = VK_API_VERSION_1_2;
 
 	std::vector<const char*> instanceExtensions;
 	uint32_t glfwExtensionCount = 0;
 	const char** glfwExtensions;
 	glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-	//std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 	instanceExtensions.insert(instanceExtensions.end(), glfwExtensions, glfwExtensions + glfwExtensionCount);
 
 	// Get extensions supported by the instance and store for later use
@@ -106,17 +99,6 @@ void VulkanRaytracer::renderFrame()
 	submitInfo.pCommandBuffers = &drawCmdBuffers[currentBuffer];
 	VK_CHECK_RESULT(vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE));
 	submitFrame();
-}
-
-std::string VulkanRaytracer::getWindowTitle()
-{
-	std::string device(deviceProperties.deviceName);
-	std::string windowTitle;
-	windowTitle = title + " - " + device;
-	if (!settings.overlay) {
-		windowTitle += " - " + std::to_string(frameCounter) + " fps";
-	}
-	return windowTitle;
 }
 
 void VulkanRaytracer::createCommandBuffers()
@@ -252,8 +234,8 @@ void VulkanRaytracer::nextFrame()
 		frameCounter = 0;
 		lastTimestamp = tEnd;
 	}
-	// TODO: Cap UI overlay update rates
-	updateOverlay();
+
+	buildCommandBuffers();
 }
 
 void VulkanRaytracer::renderLoop()
@@ -283,14 +265,6 @@ void VulkanRaytracer::renderLoop()
 	if (device != VK_NULL_HANDLE) {
 		vkDeviceWaitIdle(device);
 	}
-}
-
-void VulkanRaytracer::updateOverlay()
-{
-	if (!settings.overlay)
-		return;
-
-	buildCommandBuffers();
 }
 
 void VulkanRaytracer::prepareFrame()
@@ -410,8 +384,6 @@ VulkanRaytracer::VulkanRaytracer(const std::vector<std::string>& args, bool enab
 		}
 	}
 
-	title = "Ray tracing basic";
-	settings.overlay = true;
 	camera.type = Camera::CameraType::lookat;
 	camera.setPerspective(60.0f, (float)width / (float)height, 0.1f, 512.0f);
 	camera.setRotation(glm::vec3(0.0f, 0.0f, 0.0f));
@@ -425,8 +397,6 @@ VulkanRaytracer::VulkanRaytracer(const std::vector<std::string>& args, bool enab
 	enabledDeviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
 	enabledDeviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
 	enabledDeviceExtensions.push_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
-	// We require Vulkan 1.2 for ray tracing
-	apiVersion = VK_API_VERSION_1_2;
 }
 
 VulkanRaytracer::~VulkanRaytracer()
@@ -929,12 +899,6 @@ void VulkanRaytracer::windowResize()
 		vkDestroyFramebuffer(device, frameBuffers[i], nullptr);
 	}
 	setupFrameBuffer();
-
-	//if ((width > 0.0f) && (height > 0.0f)) {
-	//	if (settings.overlay) {
-	//		UIOverlay.resize(width, height);
-	//	}
-	//}
 
 	// Command buffers need to be recreated as they may store
 	// references to the recreated frame buffer

@@ -120,11 +120,6 @@ void VulkanRaytracer::destroyCommandBuffers()
 	vkFreeCommandBuffers(device, cmdPool, static_cast<uint32_t>(drawCmdBuffers.size()), drawCmdBuffers.data());
 }
 
-std::string VulkanRaytracer::getShadersPath() const
-{
-	return getAssetPath() + "shaders/" + shaderDir + "/";
-}
-
 void VulkanRaytracer::createPipelineCache()
 {
 	VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {};
@@ -205,7 +200,6 @@ void VulkanRaytracer::nextFrame()
 	if (viewUpdated)
 	{
 		viewUpdated = false;
-		viewChanged();
 	}
 
 	render();
@@ -326,23 +320,6 @@ VulkanRaytracer::VulkanRaytracer(const std::vector<std::string>& args, bool enab
 			if (args.size() > i + 1)
 			{
 				height = std::atoi(args[i + 1].c_str());
-			}
-		}
-		// Select between glsl and hlsl shaders
-		else if (args[i] == "-s" || args[i] == "--shaders")
-		{
-			std::string type;
-			if (args.size() > i + 1)
-			{
-				type = args[i + 1];
-			}
-			if (type == "glsl" || type == "hlsl")
-			{
-				shaderDir = type;
-			}
-			else
-			{
-				throw std::runtime_error(args[i] + " must be one of 'glsl' or 'hlsl'");
 			}
 		}
 		// Benchmark
@@ -708,12 +685,6 @@ void VulkanRaytracer::setupWindow()
 //	}
 //}
 
-void VulkanRaytracer::viewChanged() {}
-
-void VulkanRaytracer::keyPressed(uint32_t) {}
-
-void VulkanRaytracer::mouseMoved(double x, double y, bool & handled) {}
-
 void VulkanRaytracer::createSynchronizationPrimitives()
 {
 	// Wait fences to sync command buffer access
@@ -912,10 +883,6 @@ void VulkanRaytracer::windowResize()
 		camera.updateAspectRatio((float)width / (float)height);
 	}
 
-	// Notify derived class
-	windowResized();
-	viewChanged();
-
 	prepared = true;
 }
 
@@ -951,8 +918,6 @@ void VulkanRaytracer::windowResize()
 //	}
 //	mousePos = glm::vec2((float)x, (float)y);
 //}
-
-void VulkanRaytracer::windowResized() {}
 
 void VulkanRaytracer::initSwapchain()
 {

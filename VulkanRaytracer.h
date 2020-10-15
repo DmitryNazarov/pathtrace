@@ -74,16 +74,9 @@ public:
 	void renderLoop();
 
 private:
-	/** @brief (Virtual) Creates the application wide Vulkan instance */
+	// Creates the application wide Vulkan instance
 	virtual VkResult createInstance(bool enableValidation);
-	/** @brief (Virtual) Called when the camera view has changed */
-	virtual void viewChanged();
-	/** @brief (Virtual) Called after a key was pressed, can be used to do custom key handling */
-	virtual void keyPressed(uint32_t);
-	/** @brief (Virtual) Called after the mouse cursor moved and before internal events (like camera rotation) is handled */
-	virtual void mouseMoved(double x, double y, bool& handled);
-	/** @brief (Virtual) Called when the window has been resized, can be used by the sample application to recreate resources */
-	virtual void windowResized();
+
 	/** @brief (Virtual) Setup default depth and stencil views */
 	virtual void setupDepthStencil();
 	/** @brief (Virtual) Setup default framebuffers for all requested swapchain images */
@@ -137,14 +130,10 @@ private:
 	//Render function to be implemented by the sample application
 	void render();
 
-	// Returns the path to the root of the glsl or hlsl shader directory.
-	std::string getShadersPath() const;
-
 	static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 	static void cursorPositionCallback(GLFWwindow* window, double x, double y);
 	static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 
-private:
 	bool viewUpdated = false;
 	uint32_t destWidth;
 	uint32_t destHeight;
@@ -159,7 +148,6 @@ private:
 	void setupSwapChain();
 	void createCommandBuffers();
 	void destroyCommandBuffers();
-	std::string shaderDir = "glsl";
 
 	// Frame counter to display fps
 	uint32_t frameCounter = 0;

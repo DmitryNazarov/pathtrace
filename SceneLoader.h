@@ -14,7 +14,7 @@ struct Object {
   Material material;
 };
 
-struct Settings {
+struct Scene {
   size_t width = 640, height = 480;
   float aspect;
   int depth = 5;
@@ -51,4 +51,4 @@ bool readvals(std::stringstream& s, const int numvals, T* values) {
   return true;
 }
 
-Settings read_settings(const std::string& filename);
+Scene loadScene(const std::string& filename);

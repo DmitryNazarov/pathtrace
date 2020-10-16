@@ -27,7 +27,7 @@
 #include "VulkanInitializers.hpp"
 #include "camera.hpp"
 #include "benchmark.hpp"
-#include <SettingsReader.h>
+#include <SceneLoader.h>
 
 
 // Holds data for a ray tracing scratch buffer that is used as a temporary storage
@@ -215,6 +215,8 @@ private:
 	bool resized = false;
 	uint32_t width = 1280;
 	uint32_t height = 720;
+
+	Scene scene;
 
 	PFN_vkGetBufferDeviceAddressKHR vkGetBufferDeviceAddressKHR = nullptr;
 	PFN_vkBindAccelerationStructureMemoryKHR vkBindAccelerationStructureMemoryKHR = nullptr;

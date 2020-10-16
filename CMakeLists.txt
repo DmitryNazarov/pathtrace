@@ -14,7 +14,7 @@ set(SOURCE
   VulkanSwapChain.cpp
   VulkanTools.cpp
   Transform.cpp
-  SettingsReader.cpp
+  SceneLoader.cpp
 )
 
 find_package(OpenGL REQUIRED)

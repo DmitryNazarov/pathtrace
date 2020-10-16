@@ -361,6 +361,8 @@ VulkanRaytracer::VulkanRaytracer(const std::vector<std::string>& args, bool enab
 		}
 	}
 
+	scene = loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene1.test");
+
 	camera.type = Camera::CameraType::lookat;
 	camera.setPerspective(60.0f, (float)width / (float)height, 0.1f, 512.0f);
 	camera.setRotation(glm::vec3(0.0f, 0.0f, 0.0f));
@@ -1077,9 +1079,8 @@ void VulkanRaytracer::createStorageImage()
 */
 void VulkanRaytracer::createBottomLevelAccelerationStructure()
 {
-	auto s = read_settings("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene1.test");
-	auto vertices = s.vertices;
-	auto indices = s.indices;
+	auto vertices = scene.vertices;
+	auto indices = scene.indices;
 	uint32_t numTriangles = indices.size() / 3;
 
 	// Create buffers

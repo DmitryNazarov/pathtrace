@@ -46,35 +46,35 @@ Scene loadScene(const std::string& filename) {
     if (cmd == "size") {
       int values[2];
       if (readvals(ss, 2, values)) {
-        settings.width = values[0];
-        settings.height = values[1];
-        settings.aspect = static_cast<float>(settings.width) /
-          static_cast<float>(settings.height);
+        scene.width = values[0];
+        scene.height = values[1];
+        scene.aspect = static_cast<float>(scene.width) /
+          static_cast<float>(scene.height);
       }
     }
     else if (cmd == "camera") {
       float values[10];
       if (readvals(ss, 10, values)) {
-        settings.eye_init = vec3(values[0], values[1], values[2]);
-        settings.center = vec3(values[3], values[4], values[5]);
-        settings.up_init = vec3(values[6], values[7], values[8]);
-        settings.fovy = values[9];
+        scene.eye_init = vec3(values[0], values[1], values[2]);
+        scene.center = vec3(values[3], values[4], values[5]);
+        scene.up_init = vec3(values[6], values[7], values[8]);
+        scene.fovy = values[9];
 
-        settings.w = normalize(settings.eye_init - settings.center);
-        settings.u = normalize(cross(settings.up_init, settings.w));
-        settings.v = cross(settings.w, settings.u);
+        scene.w = normalize(scene.eye_init - scene.center);
+        scene.u = normalize(cross(scene.up_init, scene.w));
+        scene.v = cross(scene.w, scene.u);
       }
     }
     else if (cmd == "maxdepth") {
       int value;
       if (readvals(ss, 1, &value)) {
-        settings.depth = value;
+        scene.depth = value;
       }
     }
     else if (cmd == "output") {
       std::string value;
       if (readvals(ss, 1, &value)) {
-        settings.filename = value;
+        scene.filename = value;
       }
     }
     else if (cmd == "sphere") {
@@ -152,12 +152,12 @@ Scene loadScene(const std::string& filename) {
     else if (cmd == "tri") {
       int values[3];
       if (readvals(ss, 3, values)) {
-        uint32_t index0 = add_to_vertices(settings.vertices, transfstack.top() * vec4(scene_vertices[values[0]], 1.0f));
-        settings.indices.push_back(index0);
-        uint32_t index1 = add_to_vertices(settings.vertices, transfstack.top() * vec4(scene_vertices[values[1]], 1.0f));
-        settings.indices.push_back(index1);
-        uint32_t index2 = add_to_vertices(settings.vertices, transfstack.top() * vec4(scene_vertices[values[2]], 1.0f));
-        settings.indices.push_back(index2);
+        uint32_t index0 = add_to_vertices(scene.vertices, transfstack.top() * vec4(scene_vertices[values[0]], 1.0f));
+        scene.indices.push_back(index0);
+        uint32_t index1 = add_to_vertices(scene.vertices, transfstack.top() * vec4(scene_vertices[values[1]], 1.0f));
+        scene.indices.push_back(index1);
+        uint32_t index2 = add_to_vertices(scene.vertices, transfstack.top() * vec4(scene_vertices[values[2]], 1.0f));
+        scene.indices.push_back(index2);
         //normal = normalize(cross(t.vertices[1] - t.vertices[0], t.vertices[2] - t.vertices[0]));
 
         Object o;
@@ -170,7 +170,7 @@ Scene loadScene(const std::string& filename) {
         o.type = TRIANGLE;
         o.indices = std::vector<size_t>{index0, index1, index2};
         o.material = m;
-        settings.objects.push_back(o);
+        scene.objects.push_back(o);
       }
     }
     //else if (cmd == "trinormal") {
@@ -206,7 +206,7 @@ Scene loadScene(const std::string& filename) {
       if (readvals(ss, 6, values)) {
         auto dir = vec3(values[0], values[1], values[2]);
         auto c = Color(values[3], values[4], values[5], 1.0f);
-        settings.direct_lights.emplace_back(dir, c);
+        scene.direct_lights.emplace_back(dir, c);
       }
     }
     else if (cmd == "point") {
@@ -214,7 +214,7 @@ Scene loadScene(const std::string& filename) {
       if (readvals(ss, 6, values)) {
         auto pos = vec3(values[0], values[1], values[2]);
         auto c = Color(values[3], values[4], values[5], 1.0f);
-        settings.point_lights.emplace_back(pos, c, attenuation);
+        scene.point_lights.emplace_back(pos, c, attenuation);
       }
     }
     else if (cmd == "ambient") {
@@ -263,5 +263,5 @@ Scene loadScene(const std::string& filename) {
     }
   }
 
-  return settings;
+  return scene;
 }

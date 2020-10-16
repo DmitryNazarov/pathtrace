@@ -27,6 +27,7 @@
 #include "VulkanInitializers.hpp"
 #include "camera.hpp"
 #include "benchmark.hpp"
+#include <SettingsReader.h>
 
 
 // Holds data for a ray tracing scratch buffer that is used as a temporary storage

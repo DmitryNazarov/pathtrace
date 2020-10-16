@@ -1077,19 +1077,10 @@ void VulkanRaytracer::createStorageImage()
 */
 void VulkanRaytracer::createBottomLevelAccelerationStructure()
 {
-	// Setup vertices for a single triangle
-	struct Vertex {
-		float pos[3];
-	};
-	std::vector<Vertex> vertices = {
-		{ {  1.0f,  1.0f, 0.0f } },
-		{ { -1.0f,  1.0f, 0.0f } },
-		{ {  0.0f, -1.0f, 0.0f } }
-	};
-
-	// Setup indices
-	std::vector<uint32_t> indices = { 0, 1, 2 };
-	indexCount = static_cast<uint32_t>(indices.size());
+	auto s = read_settings("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene1.test");
+	auto vertices = s.vertices;
+	auto indices = s.indices;
+	uint32_t numTriangles = indices.size() / 3;
 
 	// Create buffers
 	// For the sake of simplicity we won't stage the vertex data to the GPU memory
@@ -1098,7 +1089,7 @@ void VulkanRaytracer::createBottomLevelAccelerationStructure()
 		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 		&vertexBuffer,
-		vertices.size() * sizeof(Vertex),
+		vertices.size() * sizeof(vec3),
 		vertices.data()));
 	// Index buffer
 	VK_CHECK_RESULT(vulkanDevice->createBuffer(
@@ -1117,7 +1108,7 @@ void VulkanRaytracer::createBottomLevelAccelerationStructure()
 	VkAccelerationStructureCreateGeometryTypeInfoKHR accelerationCreateGeometryInfo{};
 	accelerationCreateGeometryInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;
 	accelerationCreateGeometryInfo.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-	accelerationCreateGeometryInfo.maxPrimitiveCount = 1;
+	accelerationCreateGeometryInfo.maxPrimitiveCount = numTriangles;
 	accelerationCreateGeometryInfo.indexType = VK_INDEX_TYPE_UINT32;
 	accelerationCreateGeometryInfo.maxVertexCount = static_cast<uint32_t>(vertices.size());
 	accelerationCreateGeometryInfo.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
@@ -1147,7 +1138,7 @@ void VulkanRaytracer::createBottomLevelAccelerationStructure()
 	accelerationStructureGeometry.geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
 	accelerationStructureGeometry.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
 	accelerationStructureGeometry.geometry.triangles.vertexData.deviceAddress = vertexBufferDeviceAddress.deviceAddress;
-	accelerationStructureGeometry.geometry.triangles.vertexStride = sizeof(Vertex);
+	accelerationStructureGeometry.geometry.triangles.vertexStride = sizeof(vec3);
 	accelerationStructureGeometry.geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
 	accelerationStructureGeometry.geometry.triangles.indexData.deviceAddress = indexBufferDeviceAddress.deviceAddress;
 
@@ -1169,7 +1160,7 @@ void VulkanRaytracer::createBottomLevelAccelerationStructure()
 	accelerationBuildGeometryInfo.scratchData.deviceAddress = scratchBuffer.deviceAddress;
 
 	VkAccelerationStructureBuildOffsetInfoKHR accelerationBuildOffsetInfo{};
-	accelerationBuildOffsetInfo.primitiveCount = 1;
+	accelerationBuildOffsetInfo.primitiveCount = numTriangles;
 	accelerationBuildOffsetInfo.primitiveOffset = 0x0;
 	accelerationBuildOffsetInfo.firstVertex = 0;
 	accelerationBuildOffsetInfo.transformOffset = 0x0;

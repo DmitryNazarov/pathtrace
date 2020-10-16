@@ -38,6 +38,5 @@ glfw
 *.manifest
 *.ilk
 *.pdb
-*.txt
 *.rc
 *.res

@@ -2,7 +2,7 @@
 
 int main() {
 	try {
-		auto raytracer = std::make_unique<VulkanRaytracer>(std::vector<std::string>(), true);
+		auto raytracer = std::make_unique<VulkanRaytracer>();
 		raytracer->initAPIs();
 		raytracer->setupWindow();
 		raytracer->prepare();

@@ -1,7 +1,7 @@
 #include "VulkanRaytracer.h"
 
 
-VkResult VulkanRaytracer::createInstance(bool enableValidation)
+VkResult VulkanRaytracer::createInstance()
 {
 	VkApplicationInfo appInfo = {};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -289,38 +289,20 @@ void VulkanRaytracer::submitFrame()
 	VK_CHECK_RESULT(vkQueueWaitIdle(queue));
 }
 
-VulkanRaytracer::VulkanRaytracer(const std::vector<std::string>& args, bool enableValidation)
+VulkanRaytracer::VulkanRaytracer(const std::vector<std::string>& args)
 {
-	settings.validation = enableValidation;
+#ifdef DEBUG
+	settings.validation = true;
+#else
+	settings.validation = false;
+#endif // DEBUG
 
 	// Parse command line arguments
 	for (size_t i = 0; i < args.size(); ++i)
 	{
-		if (args[i] == "-validation")
-		{
-			settings.validation = true;
-		}
-		else if (args[i] == "-vsync")
+		if (args[i] == "-vsync")
 		{
 			settings.vsync = true;
-		}
-		else if (args[i] == "-f" || args[i] == "--fullscreen")
-		{
-			settings.fullscreen = true;
-		}
-		else if (args[i] == "-w" || args[i] == "-width")
-		{
-			if (args.size() > i + 1)
-			{
-				width = std::atoi(args[i + 1].c_str());
-			}
-		}
-		else if (args[i] == "-h" || args[i] == "-height")
-		{
-			if (args.size() > i + 1)
-			{
-				height = std::atoi(args[i + 1].c_str());
-			}
 		}
 		// Benchmark
 		else if (args[i] == "-b" || args[i] == "--benchmark") {
@@ -363,10 +345,15 @@ VulkanRaytracer::VulkanRaytracer(const std::vector<std::string>& args, bool enab
 
 	scene = loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene1.test");
 
+	height = scene.height;
+	width = scene.width;
+	scene.eye_init.z = -scene.eye_init.z;
+
 	camera.type = Camera::CameraType::lookat;
-	camera.setPerspective(60.0f, (float)width / (float)height, 0.1f, 512.0f);
+	camera.setPerspective(scene.fovy, (float)width / (float)height, 0.1f, 512.0f);
 	camera.setRotation(glm::vec3(0.0f, 0.0f, 0.0f));
-	camera.setTranslation(glm::vec3(0.0f, 0.0f, -2.5f));
+	camera.setTranslation(scene.eye_init);
+
 	// Enable instance and device extensions required to use VK_KHR_ray_tracing
 	enabledInstanceExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 	enabledDeviceExtensions.push_back(VK_KHR_MAINTENANCE3_EXTENSION_NAME);
@@ -449,10 +436,8 @@ bool VulkanRaytracer::initAPIs()
 {
 	glfwInit();
 
-	VkResult err;
-
 	// Vulkan instance
-	err = createInstance(settings.validation);
+	 VkResult err = createInstance();
 	if (err) {
 		vks::tools::exitFatal("Could not create Vulkan instance : \n" + vks::tools::errorString(err), err);
 		return false;

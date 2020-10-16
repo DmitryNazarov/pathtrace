@@ -61,7 +61,7 @@ struct AccelerationStructure {
 class VulkanRaytracer
 {
 public:
-	VulkanRaytracer(const std::vector<std::string>& args = {}, bool enableValidation = false);
+	VulkanRaytracer(const std::vector<std::string>& args = {});
 	virtual ~VulkanRaytracer();
 
 	// Init GLFW, setup the vulkan instance, enable required extensions and connect to the physical device (GPU)
@@ -76,7 +76,7 @@ public:
 
 private:
 	// Creates the application wide Vulkan instance
-	virtual VkResult createInstance(bool enableValidation);
+	VkResult createInstance();
 
 	/** @brief (Virtual) Setup default depth and stencil views */
 	virtual void setupDepthStencil();
@@ -275,8 +275,6 @@ private:
 	struct Settings {
 		/** @brief Activates validation layers (and message output) when set to true */
 		bool validation = false;
-		/** @brief Set to true if fullscreen mode has been requested via command line */
-		bool fullscreen = false;
 		/** @brief Set to true if v-sync will be forced for the swapchain */
 		bool vsync = false;
 	} settings;

@@ -349,10 +349,8 @@ VulkanRaytracer::VulkanRaytracer(const std::vector<std::string>& args)
 	width = scene.width;
 	scene.eye_init.z = -scene.eye_init.z;
 
-	camera.type = Camera::CameraType::lookat;
 	camera.setPerspective(scene.fovy, (float)width / (float)height, 0.1f, 512.0f);
-	camera.setRotation(glm::vec3(0.0f, 0.0f, 0.0f));
-	camera.setTranslation(scene.eye_init);
+	camera.setLookAt(scene.eye_init, scene.center, scene.up_init);
 
 	// Enable instance and device extensions required to use VK_KHR_ray_tracing
 	enabledInstanceExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
@@ -541,136 +539,9 @@ void VulkanRaytracer::setupWindow()
 	glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 	glfwSetCursorPosCallback(window, cursorPositionCallback);
 	glfwSetMouseButtonCallback(window, mouseButtonCallback);
+	glfwSetMouseButtonCallback(window, mouseButtonCallback);
+	glfwSetKeyCallback(window, keyCallback);
 }
-
-//void VulkanExampleBase::handleMessages(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-//{
-//	switch (uMsg)
-//	{
-//	case WM_CLOSE:
-//		prepared = false;
-//		DestroyWindow(hWnd);
-//		PostQuitMessage(0);
-//		break;
-//	case WM_PAINT:
-//		ValidateRect(window, NULL);
-//		break;
-//	case WM_KEYDOWN:
-//		switch (wParam)
-//		{
-//		case KEY_P:
-//			paused = !paused;
-//			break;
-//		case KEY_F1:
-//			if (settings.overlay) {
-//				UIOverlay.visible = !UIOverlay.visible;
-//			}
-//			break;
-//		case KEY_ESCAPE:
-//			PostQuitMessage(0);
-//			break;
-//		}
-//
-//		if (camera.type == Camera::firstperson)
-//		{
-//			switch (wParam)
-//			{
-//			case KEY_W:
-//				camera.keys.up = true;
-//				break;
-//			case KEY_S:
-//				camera.keys.down = true;
-//				break;
-//			case KEY_A:
-//				camera.keys.left = true;
-//				break;
-//			case KEY_D:
-//				camera.keys.right = true;
-//				break;
-//			}
-//		}
-//
-//		keyPressed((uint32_t)wParam);
-//		break;
-//	case WM_KEYUP:
-//		if (camera.type == Camera::firstperson)
-//		{
-//			switch (wParam)
-//			{
-//			case KEY_W:
-//				camera.keys.up = false;
-//				break;
-//			case KEY_S:
-//				camera.keys.down = false;
-//				break;
-//			case KEY_A:
-//				camera.keys.left = false;
-//				break;
-//			case KEY_D:
-//				camera.keys.right = false;
-//				break;
-//			}
-//		}
-//		break;
-//	case WM_LBUTTONDOWN:
-//		mousePos = glm::vec2((float)LOWORD(lParam), (float)HIWORD(lParam));
-//		mouseButtons.left = true;
-//		break;
-//	case WM_RBUTTONDOWN:
-//		mousePos = glm::vec2((float)LOWORD(lParam), (float)HIWORD(lParam));
-//		mouseButtons.right = true;
-//		break;
-//	case WM_MBUTTONDOWN:
-//		mousePos = glm::vec2((float)LOWORD(lParam), (float)HIWORD(lParam));
-//		mouseButtons.middle = true;
-//		break;
-//	case WM_LBUTTONUP:
-//		mouseButtons.left = false;
-//		break;
-//	case WM_RBUTTONUP:
-//		mouseButtons.right = false;
-//		break;
-//	case WM_MBUTTONUP:
-//		mouseButtons.middle = false;
-//		break;
-//	case WM_MOUSEWHEEL:
-//	{
-//		short wheelDelta = GET_WHEEL_DELTA_WPARAM(wParam);
-//		camera.translate(glm::vec3(0.0f, 0.0f, (float)wheelDelta * 0.005f));
-//		viewUpdated = true;
-//		break;
-//	}
-//	case WM_MOUSEMOVE:
-//	{
-//		handleMouseMove(LOWORD(lParam), HIWORD(lParam));
-//		break;
-//	}
-//	case WM_SIZE:
-//		if ((prepared) && (wParam != SIZE_MINIMIZED))
-//		{
-//			if ((resizing) || ((wParam == SIZE_MAXIMIZED) || (wParam == SIZE_RESTORED)))
-//			{
-//				destWidth = LOWORD(lParam);
-//				destHeight = HIWORD(lParam);
-//				windowResize();
-//			}
-//		}
-//		break;
-//	case WM_GETMINMAXINFO:
-//	{
-//		LPMINMAXINFO minMaxInfo = (LPMINMAXINFO)lParam;
-//		minMaxInfo->ptMinTrackSize.x = 64;
-//		minMaxInfo->ptMinTrackSize.y = 64;
-//		break;
-//	}
-//	case WM_ENTERSIZEMOVE:
-//		resizing = true;
-//		break;
-//	case WM_EXITSIZEMOVE:
-//		resizing = false;
-//		break;
-//	}
-//}
 
 void VulkanRaytracer::createSynchronizationPrimitives()
 {
@@ -872,39 +743,6 @@ void VulkanRaytracer::windowResize()
 
 	prepared = true;
 }
-
-//void VulkanExampleBase::handleMouseMove(int32_t x, int32_t y)
-//{
-//	int32_t dx = (int32_t)mousePos.x - x;
-//	int32_t dy = (int32_t)mousePos.y - y;
-//
-//	bool handled = false;
-//
-//	if (settings.overlay) {
-//		ImGuiIO& io = ImGui::GetIO();
-//		handled = io.WantCaptureMouse;
-//	}
-//	mouseMoved((float)x, (float)y, handled);
-//
-//	if (handled) {
-//		mousePos = glm::vec2((float)x, (float)y);
-//		return;
-//	}
-//
-//	if (mouseButtons.left) {
-//		camera.rotate(glm::vec3(dy * camera.rotationSpeed, -dx * camera.rotationSpeed, 0.0f));
-//		viewUpdated = true;
-//	}
-//	if (mouseButtons.right) {
-//		camera.translate(glm::vec3(-0.0f, 0.0f, dy * .005f));
-//		viewUpdated = true;
-//	}
-//	if (mouseButtons.middle) {
-//		camera.translate(glm::vec3(-dx * 0.01f, -dy * 0.01f, 0.0f));
-//		viewUpdated = true;
-//	}
-//	mousePos = glm::vec2((float)x, (float)y);
-//}
 
 void VulkanRaytracer::initSwapchain()
 {
@@ -1399,9 +1237,9 @@ void VulkanRaytracer::createRayTracingPipeline()
 	const uint32_t shaderIndexClosestHit = 2;
 
 	std::array<VkPipelineShaderStageCreateInfo, 3> shaderStages;
-	shaderStages[shaderIndexRaygen] = loadShader(/*getShadersPath() +*/ "shaders/raygen.rgen.spv", VK_SHADER_STAGE_RAYGEN_BIT_KHR);
-	shaderStages[shaderIndexMiss] = loadShader(/*getShadersPath() +*/ "shaders/miss.rmiss.spv", VK_SHADER_STAGE_MISS_BIT_KHR);
-	shaderStages[shaderIndexClosestHit] = loadShader(/*getShadersPath() +*/ "shaders/closesthit.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
+	shaderStages[shaderIndexRaygen] = loadShader("shaders/raygen.rgen.spv", VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+	shaderStages[shaderIndexMiss] = loadShader("shaders/miss.rmiss.spv", VK_SHADER_STAGE_MISS_BIT_KHR);
+	shaderStages[shaderIndexClosestHit] = loadShader("shaders/closesthit.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
 
 	/*
 		Setup ray tracing shader groups
@@ -1643,15 +1481,7 @@ void VulkanRaytracer::cursorPositionCallback(GLFWwindow* window, double x, doubl
 	int32_t dy = (int32_t)app->mousePos.y - y;
 
 	if (app->mouseButtons.left) {
-		app->camera.rotate(glm::vec3(dy * app->camera.rotationSpeed, -dx * app->camera.rotationSpeed, 0.0f));
-		app->viewUpdated = true;
-	}
-	if (app->mouseButtons.right) {
-		app->camera.translate(glm::vec3(-0.0f, 0.0f, dy * .005f));
-		app->viewUpdated = true;
-	}
-	if (app->mouseButtons.middle) {
-		app->camera.translate(glm::vec3(-dx * 0.01f, -dy * 0.01f, 0.0f));
+		app->camera.rotate(glm::vec2(-dx * app->camera.rotationSpeed, -dy * app->camera.rotationSpeed));
 		app->viewUpdated = true;
 	}
 	app->mousePos = glm::vec2((float)x, (float)y);
@@ -1663,5 +1493,31 @@ void VulkanRaytracer::mouseButtonCallback(GLFWwindow* window, int button, int ac
 
 	if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS)
 		app->mouseButtons.left = true;
+	else if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE)
+		app->mouseButtons.left = false;
 }
 
+void VulkanRaytracer::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+	auto app = reinterpret_cast<VulkanRaytracer*>(glfwGetWindowUserPointer(window));
+
+	if (key == GLFW_KEY_LEFT && action == GLFW_PRESS)
+		app->camera.keys.left = true;
+	else if (key == GLFW_KEY_LEFT && action == GLFW_RELEASE)
+		app->camera.keys.left = false;
+	else if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS)
+		app->camera.keys.right = true;
+	else if (key == GLFW_KEY_RIGHT && action == GLFW_RELEASE)
+		app->camera.keys.right = false;
+	else if (key == GLFW_KEY_UP && action == GLFW_PRESS)
+		app->camera.keys.up = true;
+	else if (key == GLFW_KEY_UP && action == GLFW_RELEASE)
+		app->camera.keys.up = false;
+	else if (key == GLFW_KEY_DOWN && action == GLFW_PRESS)
+		app->camera.keys.down = true;
+	else if (key == GLFW_KEY_DOWN && action == GLFW_RELEASE)
+		app->camera.keys.down = false;
+
+	else if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+		glfwSetWindowShouldClose(window, GL_TRUE);
+}

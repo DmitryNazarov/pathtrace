@@ -35,6 +35,7 @@ Scene loadScene(const std::string& filename) {
   std::stack<mat4> transfstack;
   transfstack.push(mat4(1.0)); // identity
 
+  //minus all y and z coords because of different coordinate frames in scene(ogl) and in raytracer(vulcan)
   while (getline(in, str)) {
     if ((str.find_first_not_of(" \t\r\n") == std::string::npos) ||
       (str[0] == '#'))
@@ -55,9 +56,9 @@ Scene loadScene(const std::string& filename) {
     else if (cmd == "camera") {
       float values[10];
       if (readvals(ss, 10, values)) {
-        scene.eye_init = vec3(values[0], values[1], values[2]);
-        scene.center = vec3(values[3], values[4], values[5]);
-        scene.up_init = vec3(values[6], values[7], values[8]);
+        scene.eye_init = vec3(values[0], -values[1], -values[2]);
+        scene.center = vec3(values[3], -values[4], -values[5]);
+        scene.up_init = vec3(values[6], -values[7], -values[8]);
         scene.fovy = values[9];
 
         scene.w = normalize(scene.eye_init - scene.center);
@@ -132,20 +133,14 @@ Scene loadScene(const std::string& filename) {
     else if (cmd == "vertex") {
       float values[3];
       if (readvals(ss, 3, values)) {
-        scene_vertices.emplace_back(values[0], values[1], values[2]);
-
-        //auto res = scene_vertices.insert({ values[0], values[1], values[2] });
-        //if (res.second == false)
-        //{
-        //  std::cerr << "Can't insert vertex, possible duplicate\n";
-        //}
+        scene_vertices.emplace_back(values[0], -values[1], -values[2]);
       }
     }
     else if (cmd == "vertexnormal") {
       float values[6];
       if (readvals(ss, 6, values)) {
-        auto vertex = vec3(values[0], values[1], values[2]);
-        auto vertex_normal = vec3(values[3], values[4], values[5]);
+        auto vertex = vec3(values[0], -values[1], -values[2]);
+        auto vertex_normal = vec3(values[3], -values[4], -values[5]);
         vertex_normals.emplace_back(vertex, vertex_normal);
       }
     }
@@ -204,7 +199,7 @@ Scene loadScene(const std::string& filename) {
     else if (cmd == "directional") {
       float values[6];
       if (readvals(ss, 6, values)) {
-        auto dir = vec3(values[0], values[1], values[2]);
+        auto dir = vec3(values[0], -values[1], -values[2]);
         auto c = Color(values[3], values[4], values[5], 1.0f);
         scene.direct_lights.emplace_back(dir, c);
       }
@@ -212,7 +207,7 @@ Scene loadScene(const std::string& filename) {
     else if (cmd == "point") {
       float values[6];
       if (readvals(ss, 6, values)) {
-        auto pos = vec3(values[0], values[1], values[2]);
+        auto pos = vec3(values[0], -values[1], -values[2]);
         auto c = Color(values[3], values[4], values[5], 1.0f);
         scene.point_lights.emplace_back(pos, c, attenuation);
       }

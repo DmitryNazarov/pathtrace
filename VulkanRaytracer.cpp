@@ -347,7 +347,6 @@ VulkanRaytracer::VulkanRaytracer(const std::vector<std::string>& args)
 
 	height = scene.height;
 	width = scene.width;
-	scene.eye_init.z = -scene.eye_init.z;
 
 	camera.setPerspective(scene.fovy, (float)width / (float)height, 0.1f, 512.0f);
 	camera.setLookAt(scene.eye_init, scene.center, scene.up_init);
@@ -1481,7 +1480,7 @@ void VulkanRaytracer::cursorPositionCallback(GLFWwindow* window, double x, doubl
 	int32_t dy = (int32_t)app->mousePos.y - y;
 
 	if (app->mouseButtons.left) {
-		app->camera.rotate(glm::vec2(-dx * app->camera.rotationSpeed, -dy * app->camera.rotationSpeed));
+		app->camera.rotate(glm::vec2(dx * app->camera.rotationSpeed, dy * app->camera.rotationSpeed));
 		app->viewUpdated = true;
 	}
 	app->mousePos = glm::vec2((float)x, (float)y);

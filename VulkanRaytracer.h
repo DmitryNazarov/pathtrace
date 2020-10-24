@@ -141,8 +141,8 @@ private:
 	uint32_t destHeight;
 	bool resizing = false;
 	void windowResize();
-	//void handleMouseMove(int32_t x, int32_t y);
 	void nextFrame();
+	void updateTitle();
 	void createPipelineCache();
 	void createCommandPool();
 	void createSynchronizationPrimitives();
@@ -256,6 +256,11 @@ private:
 	struct UniformData {
 		glm::mat4 viewInverse;
 		glm::mat4 projInverse;
+		int32_t vertexSize;
+		std::vector<PointLight> pointLights;
+		std::vector<DirectionLight> directLights;
+		std::vector<Material> triangleMaterials;
+		std::vector<Material> sphereMaterials;
 	} uniformData;
 	vks::Buffer ubo;
 
@@ -292,7 +297,7 @@ private:
 	Camera camera;
 	glm::vec2 mousePos;
 
-	std::string applicationName = "Raytracer";
+	std::string applicationName = "Vulkan Raytracer";
 
 	struct {
 		VkImage image;

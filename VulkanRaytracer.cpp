@@ -225,6 +225,7 @@ void VulkanRaytracer::nextFrame()
 	if (fpsTimer > 1000.0f)
 	{
 		lastFPS = static_cast<uint32_t>((float)frameCounter * (1000.0f / fpsTimer));
+		updateTitle();
 		frameCounter = 0;
 		lastTimestamp = tEnd;
 	}
@@ -533,7 +534,7 @@ void VulkanRaytracer::setupWindow()
 {
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-	window = glfwCreateWindow(width, height, "Vulkan", nullptr, nullptr);
+	window = glfwCreateWindow(width, height, applicationName.c_str(), nullptr, nullptr);
 	glfwSetWindowUserPointer(window, this);
 	glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 	glfwSetCursorPosCallback(window, cursorPositionCallback);
@@ -1433,6 +1434,11 @@ void VulkanRaytracer::updateUniformBuffers()
 {
 	uniformData.projInverse = glm::inverse(camera.matrices.perspective);
 	uniformData.viewInverse = glm::inverse(camera.matrices.view);
+	uniformData.vertexSize = scene.vertices.size();
+	uniformData.pointLights = scene.pointLights;
+	uniformData.directLights = scene.directLights;
+	uniformData.triangleMaterials = scene.triangleMaterials;
+	uniformData.sphereMaterials = scene.sphereMaterials;
 	memcpy(ubo.mapped, &uniformData, sizeof(uniformData));
 }
 
@@ -1465,6 +1471,13 @@ void VulkanRaytracer::render()
 	draw();
 	if (camera.updated)
 		updateUniformBuffers();
+}
+
+void VulkanRaytracer::updateTitle()
+{
+	std::stringstream ss;
+	ss << applicationName << " " << (1000.0f / lastFPS) << " ms/frame" << " (" << lastFPS << " fps)";
+	glfwSetWindowTitle(window, ss.str().c_str());
 }
 
 void VulkanRaytracer::framebufferResizeCallback(GLFWwindow* window, int width, int height) {

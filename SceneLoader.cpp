@@ -3,7 +3,7 @@
 #include <SceneLoader.h>
 
 
-uint32_t add_to_vertices(std::vector<vec3>& vertices, vec3 vertex1)
+uint32_t addToVertices(std::vector<vec3>& vertices, vec3 vertex1)
 {
   auto it = std::find(vertices.begin(), vertices.end(), vertex1);
   if (it != vertices.end())
@@ -17,13 +17,13 @@ uint32_t add_to_vertices(std::vector<vec3>& vertices, vec3 vertex1)
 Scene loadScene(const std::string& filename) {
   Scene scene;
 
-  std::vector<vec3> scene_vertices;
-  std::vector<std::pair<vec3, vec3>> vertex_normals;
+  std::vector<vec3> sceneVertices;
+  std::vector<std::pair<vec3, vec3>> vertexNormals;
 
-  Color ambient{ 0.2f, 0.2f, 0.2f, 1.0f };
-  Color diffuse{ 0.0f, 0.0f, 0.0f, 0.0f };
-  Color specular{ 0.0f, 0.0f, 0.0f, 0.0f };
-  Color emission{ 0.0f, 0.0f, 0.0f, 0.0f };
+  vec4 ambient{ 0.2f, 0.2f, 0.2f, 1.0f };
+  vec4 diffuse{ 0.0f, 0.0f, 0.0f, 0.0f };
+  vec4 specular{ 0.0f, 0.0f, 0.0f, 0.0f };
+  vec4 emission{ 0.0f, 0.0f, 0.0f, 0.0f };
   float shininess = .0;
   vec3 attenuation{ 1.0f, 0.0f, 0.0f };
 
@@ -133,39 +133,28 @@ Scene loadScene(const std::string& filename) {
     else if (cmd == "vertex") {
       float values[3];
       if (readvals(ss, 3, values)) {
-        scene_vertices.emplace_back(values[0], -values[1], -values[2]);
+        sceneVertices.emplace_back(values[0], -values[1], -values[2]);
       }
     }
     else if (cmd == "vertexnormal") {
       float values[6];
       if (readvals(ss, 6, values)) {
         auto vertex = vec3(values[0], -values[1], -values[2]);
-        auto vertex_normal = vec3(values[3], -values[4], -values[5]);
-        vertex_normals.emplace_back(vertex, vertex_normal);
+        auto vertexNormal = vec3(values[3], -values[4], -values[5]);
+        vertexNormals.emplace_back(vertex, vertexNormal);
       }
     }
     else if (cmd == "tri") {
       int values[3];
       if (readvals(ss, 3, values)) {
-        uint32_t index0 = add_to_vertices(scene.vertices, transfstack.top() * vec4(scene_vertices[values[0]], 1.0f));
+        uint32_t index0 = addToVertices(scene.vertices, transfstack.top() * vec4(sceneVertices[values[0]], 1.0f));
         scene.indices.push_back(index0);
-        uint32_t index1 = add_to_vertices(scene.vertices, transfstack.top() * vec4(scene_vertices[values[1]], 1.0f));
+        uint32_t index1 = addToVertices(scene.vertices, transfstack.top() * vec4(sceneVertices[values[1]], 1.0f));
         scene.indices.push_back(index1);
-        uint32_t index2 = add_to_vertices(scene.vertices, transfstack.top() * vec4(scene_vertices[values[2]], 1.0f));
+        uint32_t index2 = addToVertices(scene.vertices, transfstack.top() * vec4(sceneVertices[values[2]], 1.0f));
         scene.indices.push_back(index2);
         //normal = normalize(cross(t.vertices[1] - t.vertices[0], t.vertices[2] - t.vertices[0]));
-
-        Object o;
-        Material m;
-        m.ambient = ambient;
-        m.diffuse = diffuse;
-        m.specular = specular;
-        m.emission = emission;
-        m.shininess = shininess;
-        o.type = TRIANGLE;
-        o.indices = std::vector<size_t>{index0, index1, index2};
-        o.material = m;
-        scene.objects.push_back(o);
+        scene.triangleMaterials.emplace_back(ambient, diffuse, specular, emission, shininess);
       }
     }
     //else if (cmd == "trinormal") {
@@ -200,22 +189,22 @@ Scene loadScene(const std::string& filename) {
       float values[6];
       if (readvals(ss, 6, values)) {
         auto dir = vec3(values[0], -values[1], -values[2]);
-        auto c = Color(values[3], values[4], values[5], 1.0f);
-        scene.direct_lights.emplace_back(dir, c);
+        auto c = vec4(values[3], values[4], values[5], 1.0f);
+        scene.directLights.emplace_back(dir, c);
       }
     }
     else if (cmd == "point") {
       float values[6];
       if (readvals(ss, 6, values)) {
         auto pos = vec3(values[0], -values[1], -values[2]);
-        auto c = Color(values[3], values[4], values[5], 1.0f);
-        scene.point_lights.emplace_back(pos, c, attenuation);
+        auto c = vec4(values[3], values[4], values[5], 1.0f);
+        scene.pointLights.emplace_back(pos, c, attenuation);
       }
     }
     else if (cmd == "ambient") {
       float values[3];
       if (readvals(ss, 3, values)) {
-        ambient = Color(values[0], values[1], values[2], 1.0f);
+        ambient = vec4(values[0], values[1], values[2], 1.0f);
       }
     }
     else if (cmd == "attenuation") {
@@ -229,19 +218,19 @@ Scene loadScene(const std::string& filename) {
     else if (cmd == "diffuse") {
       float values[3];
       if (readvals(ss, 3, values)) {
-        diffuse = Color(values[0], values[1], values[2], 1.0f);
+        diffuse = vec4(values[0], values[1], values[2], 1.0f);
       }
     }
     else if (cmd == "specular") {
       float values[3];
       if (readvals(ss, 3, values)) {
-        specular = Color(values[0], values[1], values[2], 1.0f);
+        specular = vec4(values[0], values[1], values[2], 1.0f);
       }
     }
     else if (cmd == "emission") {
       float values[3];
       if (readvals(ss, 3, values)) {
-        emission = Color(values[0], values[1], values[2], 1.0f);
+        emission = vec4(values[0], values[1], values[2], 1.0f);
       }
     }
     else if (cmd == "shininess") {

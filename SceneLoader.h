@@ -6,13 +6,6 @@
 #include <Primitives.h>
 #include <Transform.h>
 
-enum ObjectType { TRIANGLE, TRIANGLE_NORMALS, SPHERE };
-
-struct Object {
-  ObjectType type;
-  std::vector<size_t> indices;
-  Material material;
-};
 
 struct Scene {
   size_t width = 640, height = 480;
@@ -30,10 +23,11 @@ struct Scene {
   std::vector<Triangle> triangles;
   std::vector<TriangleNormals> triangle_normals;
 
-  std::vector<DirectionLight> direct_lights;
-  std::vector<PointLight> point_lights;
+  std::vector<DirectionLight> directLights;
+  std::vector<PointLight> pointLights;
 
-  std::vector<Object> objects;
+  std::vector<Material> triangleMaterials;
+  std::vector<Material> sphereMaterials;
 
   std::vector<vec3> vertices;
   std::vector<uint32_t> indices;

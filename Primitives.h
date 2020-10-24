@@ -4,9 +4,20 @@
 #include <transform.h>
 
 using namespace Transform;
-using Color = vec4;
 
 struct Material {
+  Material(vec4 ambient,
+    vec4 diffuse,
+    vec4 specular,
+    vec4 emission,
+    float shininess) : 
+      ambient(ambient),
+      diffuse(diffuse),
+      specular(specular),
+      emission(emission),
+      shininess(shininess)
+  {
+  }
   vec4 ambient;
   vec4 diffuse;
   vec4 specular;
@@ -34,18 +45,18 @@ struct TriangleNormals {
 };
 
 struct DirectionLight {
-  DirectionLight(const vec3& dir, const Color& c) : dir(dir), color(c) {}
+  DirectionLight(const vec3& dir, const vec4& color) : dir(dir), color(color) {}
   vec3 dir;
-  Color color;
+  vec4 color;
 };
 
 struct PointLight {
-  PointLight(const vec3& pos, const Color& c, const vec3& attenuation) :
-    pos(pos), color(c), attenuation(attenuation)
+  PointLight(const vec3& pos, const vec4& color, const vec3& attenuation) :
+    pos(pos), color(color), attenuation(attenuation)
   {}
 
   vec3 pos;
-  Color color;
+  vec4 color;
   vec3 attenuation{ 1.0f, 0.0f, 0.0f };
 };
 

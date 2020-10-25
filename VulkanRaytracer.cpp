@@ -373,8 +373,6 @@ VulkanRaytracer::~VulkanRaytracer()
 	vkFreeMemory(device, storageImage.memory, nullptr);
 	vkDestroyAccelerationStructureKHR(device, bottomLevelAS.accelerationStructure, nullptr);
 	vkDestroyAccelerationStructureKHR(device, topLevelAS.accelerationStructure, nullptr);
-	vertexBuffer.destroy();
-	indexBuffer.destroy();
 	shaderBindingTable.destroy();
 	ubo.destroy();
 
@@ -840,9 +838,9 @@ RayTracingObjectMemory VulkanRaytracer::createObjectMemory(VkAccelerationStructu
 }
 
 /*
-	Gets the device address from a buffer that's required for some of the buffers used for ray tracing
+Gets the device address from a buffer that's required for some of the buffers used for ray tracing
 */
-uint64_t VulkanRaytracer::getBufferDeviceAddress(VkBuffer buffer)
+VkDeviceAddress VulkanRaytracer::getBufferDeviceAddress(VkBuffer buffer)
 {
 	VkBufferDeviceAddressInfoKHR bufferDeviceAI{};
 	bufferDeviceAI.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
@@ -902,39 +900,18 @@ void VulkanRaytracer::createStorageImage()
 */
 void VulkanRaytracer::createBottomLevelAccelerationStructure()
 {
-	auto vertices = scene.vertices;
-	auto indices = scene.indices;
-	uint32_t numTriangles = indices.size() / 3;
+	scene.loadVulkanBuffersForScene(vulkanDevice, queue);
+	uint32_t numTriangles = scene.indicesBuf.count / 3;
 
-	// Create buffers
-	// For the sake of simplicity we won't stage the vertex data to the GPU memory
-	// Vertex buffer
-	VK_CHECK_RESULT(vulkanDevice->createBuffer(
-		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		&vertexBuffer,
-		vertices.size() * sizeof(vec3),
-		vertices.data()));
-	// Index buffer
-	VK_CHECK_RESULT(vulkanDevice->createBuffer(
-		VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		&indexBuffer,
-		indices.size() * sizeof(uint32_t),
-		indices.data()));
-
-	VkDeviceOrHostAddressConstKHR vertexBufferDeviceAddress{};
-	VkDeviceOrHostAddressConstKHR indexBufferDeviceAddress{};
-
-	vertexBufferDeviceAddress.deviceAddress = getBufferDeviceAddress(vertexBuffer.buffer);
-	indexBufferDeviceAddress.deviceAddress = getBufferDeviceAddress(indexBuffer.buffer);
+	VkDeviceAddress vertexBufferDeviceAddress = getBufferDeviceAddress(scene.verticesBuf.buffer);
+	VkDeviceAddress indexBufferDeviceAddress = getBufferDeviceAddress(scene.indicesBuf.buffer);
 
 	VkAccelerationStructureCreateGeometryTypeInfoKHR accelerationCreateGeometryInfo{};
 	accelerationCreateGeometryInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;
 	accelerationCreateGeometryInfo.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
 	accelerationCreateGeometryInfo.maxPrimitiveCount = numTriangles;
 	accelerationCreateGeometryInfo.indexType = VK_INDEX_TYPE_UINT32;
-	accelerationCreateGeometryInfo.maxVertexCount = static_cast<uint32_t>(vertices.size());
+	accelerationCreateGeometryInfo.maxVertexCount = scene.verticesBuf.count;
 	accelerationCreateGeometryInfo.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
 	accelerationCreateGeometryInfo.allowsTransforms = VK_FALSE;
 
@@ -961,10 +938,10 @@ void VulkanRaytracer::createBottomLevelAccelerationStructure()
 	accelerationStructureGeometry.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
 	accelerationStructureGeometry.geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
 	accelerationStructureGeometry.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
-	accelerationStructureGeometry.geometry.triangles.vertexData.deviceAddress = vertexBufferDeviceAddress.deviceAddress;
+	accelerationStructureGeometry.geometry.triangles.vertexData.deviceAddress = vertexBufferDeviceAddress;
 	accelerationStructureGeometry.geometry.triangles.vertexStride = sizeof(vec3);
 	accelerationStructureGeometry.geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
-	accelerationStructureGeometry.geometry.triangles.indexData.deviceAddress = indexBufferDeviceAddress.deviceAddress;
+	accelerationStructureGeometry.geometry.triangles.indexData.deviceAddress = indexBufferDeviceAddress;
 
 	std::vector<VkAccelerationStructureGeometryKHR> acceleration_geometries = { accelerationStructureGeometry };
 	VkAccelerationStructureGeometryKHR* acceleration_structure_geometries = acceleration_geometries.data();
@@ -1154,7 +1131,8 @@ void VulkanRaytracer::createDescriptorSets()
 	std::vector<VkDescriptorPoolSize> poolSizes = {
 		{ VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1 },
 		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 }
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2 }
 	};
 	VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = vks::initializers::descriptorPoolCreateInfo(poolSizes, 1);
 	VK_CHECK_RESULT(vkCreateDescriptorPool(device, &descriptorPoolCreateInfo, nullptr, &descriptorPool));
@@ -1180,13 +1158,25 @@ void VulkanRaytracer::createDescriptorSets()
 	storageImageDescriptor.imageView = storageImage.view;
 	storageImageDescriptor.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
+	VkDescriptorBufferInfo vertexBufferDescriptor{};
+	vertexBufferDescriptor.buffer = scene.verticesBuf.buffer;
+	vertexBufferDescriptor.range = VK_WHOLE_SIZE;
+
+	VkDescriptorBufferInfo indexBufferDescriptor{};
+	indexBufferDescriptor.buffer = scene.indicesBuf.buffer;
+	indexBufferDescriptor.range = VK_WHOLE_SIZE;
+
 	VkWriteDescriptorSet resultImageWrite = vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, &storageImageDescriptor);
 	VkWriteDescriptorSet uniformBufferWrite = vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2, &ubo.descriptor);
+	VkWriteDescriptorSet vertexBufferWrite = vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3, &vertexBufferDescriptor);
+	VkWriteDescriptorSet indexBufferWrite = vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4, &indexBufferDescriptor);
 
 	std::vector<VkWriteDescriptorSet> writeDescriptorSets = {
 		accelerationStructureWrite,
 		resultImageWrite,
-		uniformBufferWrite
+		uniformBufferWrite,
+		vertexBufferWrite,
+		indexBufferWrite
 	};
 	vkUpdateDescriptorSets(device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, VK_NULL_HANDLE);
 }
@@ -1200,7 +1190,7 @@ void VulkanRaytracer::createRayTracingPipeline()
 	accelerationStructureLayoutBinding.binding = 0;
 	accelerationStructureLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
 	accelerationStructureLayoutBinding.descriptorCount = 1;
-	accelerationStructureLayoutBinding.stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+	accelerationStructureLayoutBinding.stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
 
 	VkDescriptorSetLayoutBinding resultImageLayoutBinding{};
 	resultImageLayoutBinding.binding = 1;
@@ -1212,12 +1202,27 @@ void VulkanRaytracer::createRayTracingPipeline()
 	uniformBufferBinding.binding = 2;
 	uniformBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	uniformBufferBinding.descriptorCount = 1;
-	uniformBufferBinding.stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+	uniformBufferBinding.stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_MISS_BIT_KHR;
+
+	VkDescriptorSetLayoutBinding vertexBufferBinding{};
+	vertexBufferBinding.binding = 3;
+	vertexBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	vertexBufferBinding.descriptorCount = 1;
+	vertexBufferBinding.stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+
+	VkDescriptorSetLayoutBinding indexBufferBinding{};
+	indexBufferBinding.binding = 4;
+	indexBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	indexBufferBinding.descriptorCount = 1;
+	indexBufferBinding.stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+
 
 	std::vector<VkDescriptorSetLayoutBinding> bindings({
 		accelerationStructureLayoutBinding,
 		resultImageLayoutBinding,
-		uniformBufferBinding
+		uniformBufferBinding,
+		vertexBufferBinding,
+		indexBufferBinding
 		});
 
 	VkDescriptorSetLayoutCreateInfo descriptorSetlayoutCI{};
@@ -1234,16 +1239,21 @@ void VulkanRaytracer::createRayTracingPipeline()
 
 	const uint32_t shaderIndexRaygen = 0;
 	const uint32_t shaderIndexMiss = 1;
-	const uint32_t shaderIndexClosestHit = 2;
+	const uint32_t shaderIndexShadowMiss = 2;
+	const uint32_t shaderIndexClosestHit = 3;
 
-	std::array<VkPipelineShaderStageCreateInfo, 3> shaderStages;
+	std::array<VkPipelineShaderStageCreateInfo, 4> shaderStages;
 	shaderStages[shaderIndexRaygen] = loadShader("shaders/raygen.rgen.spv", VK_SHADER_STAGE_RAYGEN_BIT_KHR);
 	shaderStages[shaderIndexMiss] = loadShader("shaders/miss.rmiss.spv", VK_SHADER_STAGE_MISS_BIT_KHR);
+	shaderStages[shaderIndexShadowMiss] = loadShader("shaders/shadow.rmiss.spv", VK_SHADER_STAGE_MISS_BIT_KHR);
 	shaderStages[shaderIndexClosestHit] = loadShader("shaders/closesthit.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
 
-	/*
-		Setup ray tracing shader groups
-	*/
+	// Pass recursion depth for reflections to ray generation shader via specialization constant
+	VkSpecializationMapEntry specializationMapEntry = vks::initializers::specializationMapEntry(0, 0, sizeof(uint32_t));
+	VkSpecializationInfo specializationInfo = vks::initializers::specializationInfo(1, &specializationMapEntry, sizeof(maxRecursionDepth), &maxRecursionDepth);
+	shaderStages[shaderIndexRaygen].pSpecializationInfo = &specializationInfo;
+
+	// Setup ray tracing shader groups
 	VkRayTracingShaderGroupCreateInfoKHR raygenGroupCI{};
 	raygenGroupCI.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
 	raygenGroupCI.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
@@ -1261,6 +1271,10 @@ void VulkanRaytracer::createRayTracingPipeline()
 	missGroupCI.anyHitShader = VK_SHADER_UNUSED_KHR;
 	missGroupCI.intersectionShader = VK_SHADER_UNUSED_KHR;
 	shaderGroups.push_back(missGroupCI);
+	// Second miss group for the shadow miss shader
+	missGroupCI.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+	missGroupCI.generalShader = shaderIndexShadowMiss;
+	shaderGroups.push_back(missGroupCI);
 
 	VkRayTracingShaderGroupCreateInfoKHR closesHitGroupCI{};
 	closesHitGroupCI.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
@@ -1277,7 +1291,7 @@ void VulkanRaytracer::createRayTracingPipeline()
 	rayTracingPipelineCI.pStages = shaderStages.data();
 	rayTracingPipelineCI.groupCount = static_cast<uint32_t>(shaderGroups.size());
 	rayTracingPipelineCI.pGroups = shaderGroups.data();
-	rayTracingPipelineCI.maxRecursionDepth = 1;
+	rayTracingPipelineCI.maxRecursionDepth = maxRecursionDepth;
 	rayTracingPipelineCI.layout = pipelineLayout;
 	rayTracingPipelineCI.libraries.sType = VK_STRUCTURE_TYPE_PIPELINE_LIBRARY_CREATE_INFO_KHR;
 	VK_CHECK_RESULT(vkCreateRayTracingPipelinesKHR(device, VK_NULL_HANDLE, 1, &rayTracingPipelineCI, nullptr, &pipeline));
@@ -1334,16 +1348,11 @@ void VulkanRaytracer::buildCommandBuffers()
 	{
 		VK_CHECK_RESULT(vkBeginCommandBuffer(drawCmdBuffers[i], &cmdBufInfo));
 
-		/*
-			Dispatch the ray tracing commands
-		*/
+		// Dispatch the ray tracing commands
 		vkCmdBindPipeline(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline);
 		vkCmdBindDescriptorSets(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipelineLayout, 0, 1, &descriptorSet, 0, 0);
 
-
-		/*
-			Setup the buffer regions pointing to the shaders in our shader binding table
-		*/
+		// Setup the buffer regions pointing to the shader groups in the shader binding table
 		const VkDeviceSize sbtSize = rayTracingProperties.shaderGroupBaseAlignment * (VkDeviceSize)shaderGroups.size();
 
 		VkStridedBufferRegionKHR raygenShaderSBTEntry{};
@@ -1366,12 +1375,6 @@ void VulkanRaytracer::buildCommandBuffers()
 
 		VkStridedBufferRegionKHR callableShaderSBTEntry{};
 
-		/*
-			Dispatch the ray tracing commands
-		*/
-		vkCmdBindPipeline(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline);
-		vkCmdBindDescriptorSets(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipelineLayout, 0, 1, &descriptorSet, 0, 0);
-
 		vkCmdTraceRaysKHR(
 			drawCmdBuffers[i],
 			&raygenShaderSBTEntry,
@@ -1382,9 +1385,7 @@ void VulkanRaytracer::buildCommandBuffers()
 			height,
 			1);
 
-		/*
-			Copy ray tracing output to swap chain image
-		*/
+		// Copy ray tracing output to swap chain image
 
 		// Prepare current swap chain image as transfer destination
 		vks::tools::setImageLayout(
@@ -1434,9 +1435,11 @@ void VulkanRaytracer::updateUniformBuffers()
 {
 	uniformData.projInverse = glm::inverse(camera.matrices.perspective);
 	uniformData.viewInverse = glm::inverse(camera.matrices.view);
-	uniformData.vertexSize = scene.vertices.size();
+	uniformData.vertexSize = scene.verticesBuf.count;
 	uniformData.pointLights = scene.pointLights;
+	uniformData.pointLightsNum = scene.pointLights.size();
 	uniformData.directLights = scene.directLights;
+	uniformData.directLightsNum = scene.directLights.size();
 	uniformData.triangleMaterials = scene.triangleMaterials;
 	uniformData.sphereMaterials = scene.sphereMaterials;
 	memcpy(ubo.mapped, &uniformData, sizeof(uniformData));

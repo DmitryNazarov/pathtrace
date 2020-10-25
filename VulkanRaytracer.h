@@ -52,10 +52,10 @@ struct AccelerationStructure {
 	RayTracingObjectMemory objectMemory;
 };
 
-// Indices for the different ray tracing shader types
+// Indices for the different ray tracing groups used in this example
 #define INDEX_RAYGEN_GROUP 0
 #define INDEX_MISS_GROUP 1
-#define INDEX_CLOSEST_HIT_GROUP 2
+#define INDEX_CLOSEST_HIT_GROUP 3
 
 
 class VulkanRaytracer
@@ -240,9 +240,6 @@ private:
 	AccelerationStructure bottomLevelAS;
 	AccelerationStructure topLevelAS;
 
-	vks::Buffer vertexBuffer;
-	vks::Buffer indexBuffer;
-	uint32_t indexCount;
 	std::vector<VkRayTracingShaderGroupCreateInfoKHR> shaderGroups{};
 	vks::Buffer shaderBindingTable;
 
@@ -256,9 +253,11 @@ private:
 	struct UniformData {
 		glm::mat4 viewInverse;
 		glm::mat4 projInverse;
-		int32_t vertexSize;
+		uint32_t vertexSize;
 		std::vector<PointLight> pointLights;
+		uint32_t pointLightsNum;
 		std::vector<DirectionLight> directLights;
+		uint32_t directLightsNum;
 		std::vector<Material> triangleMaterials;
 		std::vector<Material> sphereMaterials;
 	} uniformData;
@@ -299,16 +298,13 @@ private:
 
 	std::string applicationName = "Vulkan Raytracer";
 
+	const uint32_t maxRecursionDepth = 4;
+
 	struct {
 		VkImage image;
 		VkDeviceMemory mem;
 		VkImageView view;
 	} depthStencil;
-
-	struct {
-		glm::vec2 axisLeft = glm::vec2(0.0f);
-		glm::vec2 axisRight = glm::vec2(0.0f);
-	} gamePadState;
 
 	struct {
 		bool left = false;

@@ -3,11 +3,31 @@
 #include <sstream>
 #include <fstream>
 
+#include "vulkan/vulkan.h"
+
 #include <Primitives.h>
 #include <Transform.h>
+#include <VulkanDevice.h>
 
 
-struct Scene {
+struct VArray
+{
+  uint32_t count;
+  VkBuffer buffer;
+  VkDeviceMemory memory;
+};
+
+enum class VertexComponent {Position, Normal, Color};
+struct Vertex
+{
+  Vertex(const glm::vec3& pos, const glm::vec3& normal) : pos(pos), normal(normal)
+  {}
+  glm::vec3 pos;
+  glm::vec3 normal;
+};
+
+struct Scene
+{
   size_t width = 640, height = 480;
   float aspect;
   int depth = 5;
@@ -20,8 +40,6 @@ struct Scene {
   vec3 w, u, v;
 
   std::vector<Sphere> spheres;
-  std::vector<Triangle> triangles;
-  std::vector<TriangleNormals> triangle_normals;
 
   std::vector<DirectionLight> directLights;
   std::vector<PointLight> pointLights;
@@ -29,12 +47,16 @@ struct Scene {
   std::vector<Material> triangleMaterials;
   std::vector<Material> sphereMaterials;
 
-  std::vector<vec3> vertices;
+  std::vector<Vertex> vertices;
   std::vector<uint32_t> indices;
+
+  VArray verticesBuf, indicesBuf;
+  void loadVulkanBuffersForScene(vks::VulkanDevice* device, VkQueue transferQueue, VkMemoryPropertyFlags memoryPropertyFlags = 0);
 };
 
 template <typename T>
-bool readvals(std::stringstream& s, const int numvals, T* values) {
+bool readvals(std::stringstream& s, const int numvals, T* values)
+{
   for (int i = 0; i < numvals; ++i) {
     s >> values[i];
     if (s.fail()) {

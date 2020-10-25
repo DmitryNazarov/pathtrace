@@ -3,14 +3,16 @@
 #include <SceneLoader.h>
 
 
-uint32_t addToVertices(std::vector<vec3>& vertices, vec3 vertex1)
+uint32_t addToVertices(std::vector<Vertex>& vertices, const vec3& pos, const vec3& normal)
 {
-  auto it = std::find(vertices.begin(), vertices.end(), vertex1);
+  auto it = std::find_if(vertices.begin(), vertices.end(), [&pos](const Vertex& v) {
+    return v.pos == pos;
+  });
   if (it != vertices.end())
   {
     return std::distance(vertices.begin(), it);
   }
-  vertices.push_back(vertex1);
+  vertices.emplace_back(pos, normal);
   return vertices.size() - 1;
 }
 
@@ -147,13 +149,16 @@ Scene loadScene(const std::string& filename) {
     else if (cmd == "tri") {
       int values[3];
       if (readvals(ss, 3, values)) {
-        uint32_t index0 = addToVertices(scene.vertices, transfstack.top() * vec4(sceneVertices[values[0]], 1.0f));
+        vec3 pos0 = transfstack.top() * vec4(sceneVertices[values[0]], 1.0f);
+        vec3 pos1 = transfstack.top() * vec4(sceneVertices[values[1]], 1.0f);
+        vec3 pos2 = transfstack.top() * vec4(sceneVertices[values[2]], 1.0f);
+        vec3 normal = normalize(cross(pos1 - pos0, pos2 - pos0));
+        uint32_t index0 = addToVertices(scene.vertices, pos0, normal);
+        uint32_t index1 = addToVertices(scene.vertices, pos1, normal);
+        uint32_t index2 = addToVertices(scene.vertices, pos2, normal);
         scene.indices.push_back(index0);
-        uint32_t index1 = addToVertices(scene.vertices, transfstack.top() * vec4(sceneVertices[values[1]], 1.0f));
         scene.indices.push_back(index1);
-        uint32_t index2 = addToVertices(scene.vertices, transfstack.top() * vec4(sceneVertices[values[2]], 1.0f));
         scene.indices.push_back(index2);
-        //normal = normalize(cross(t.vertices[1] - t.vertices[0], t.vertices[2] - t.vertices[0]));
         scene.triangleMaterials.emplace_back(ambient, diffuse, specular, emission, shininess);
       }
     }
@@ -248,4 +253,69 @@ Scene loadScene(const std::string& filename) {
   }
 
   return scene;
+}
+
+void Scene::loadVulkanBuffersForScene(vks::VulkanDevice* device, VkQueue transferQueue, VkMemoryPropertyFlags memoryPropertyFlags)
+{
+  verticesBuf.count = vertices.size();
+  indicesBuf.count = indices.size();
+  size_t vertexSize = vertices.size() * sizeof(Vertex);
+  size_t indexSize = indices.size() * sizeof(uint32_t);
+
+  struct StagingBuffer {
+    VkBuffer buffer;
+    VkDeviceMemory memory;
+  } vertexStaging, indexStaging;
+
+  // Create staging buffers
+  // Vertex data
+  VK_CHECK_RESULT(device->createBuffer(
+    VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    vertexSize,
+    &vertexStaging.buffer,
+    &vertexStaging.memory,
+    vertices.data()));
+  // Index data
+  VK_CHECK_RESULT(device->createBuffer(
+    VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    indexSize,
+    &indexStaging.buffer,
+    &indexStaging.memory,
+    indices.data()));
+
+  // Create device local buffers
+  // Vertex buffer
+  VK_CHECK_RESULT(device->createBuffer(
+    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | memoryPropertyFlags,
+    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    vertexSize,
+    &verticesBuf.buffer,
+    &verticesBuf.memory));
+  // Index buffer
+  VK_CHECK_RESULT(device->createBuffer(
+    VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | memoryPropertyFlags,
+    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    indexSize,
+    &indicesBuf.buffer,
+    &indicesBuf.memory));
+
+  // Copy from staging buffers
+  VkCommandBuffer copyCmd = device->createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
+
+  VkBufferCopy copyRegion = {};
+
+  copyRegion.size = vertexSize;
+  vkCmdCopyBuffer(copyCmd, vertexStaging.buffer, verticesBuf.buffer, 1, &copyRegion);
+
+  copyRegion.size = indexSize;
+  vkCmdCopyBuffer(copyCmd, indexStaging.buffer, indicesBuf.buffer, 1, &copyRegion);
+
+  device->flushCommandBuffer(copyCmd, transferQueue, true);
+
+  vkDestroyBuffer(device->logicalDevice, vertexStaging.buffer, nullptr);
+  vkFreeMemory(device->logicalDevice, vertexStaging.memory, nullptr);
+  vkDestroyBuffer(device->logicalDevice, indexStaging.buffer, nullptr);
+  vkFreeMemory(device->logicalDevice, indexStaging.memory, nullptr);
 }

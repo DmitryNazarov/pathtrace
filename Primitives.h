@@ -32,18 +32,6 @@ struct Sphere {
   mat4 transform{1.0f}, inverted_transform{ 1.0f };
 };
 
-struct Triangle {
-  std::vector<vec3> vertices;
-  vec3 normal;
-  Material material;
-};
-
-struct TriangleNormals {
-  std::vector<vec3> vertices;
-  std::vector<vec3> normals;
-  Material material;
-};
-
 struct DirectionLight {
   DirectionLight(const vec3& dir, const vec4& color) : dir(dir), color(color) {}
   vec3 dir;
@@ -58,13 +46,6 @@ struct PointLight {
   vec3 pos;
   vec4 color;
   vec3 attenuation{ 1.0f, 0.0f, 0.0f };
-};
-
-struct Ray {
-  Ray(const vec3& origin, const vec3& direction)
-    : orig(origin), dir(direction) {}
-  vec3 orig;
-  vec3 dir;
 };
 
 #endif // PRIMITIVES_H

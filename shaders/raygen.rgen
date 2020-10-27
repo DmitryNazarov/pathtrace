@@ -1,38 +1,13 @@
 #version 460
 #extension GL_EXT_ray_tracing : require
 
-struct PointLight
-{
-  vec3 pos;
-  vec4 color;
-  vec3 attenuation;
-};
-
-struct DirectionLight
-{
-  vec3 dir;
-  vec4 color;
-};
-
-struct Material
-{
-  vec4 ambient;
-  vec4 diffuse;
-  vec4 specular;
-  vec4 emission;
-  float shininess;
-};
-
 layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
 layout(binding = 1, set = 0, rgba8) uniform image2D image;
 layout(binding = 2, set = 0) uniform UBO
 {
 	mat4 viewInverse;
 	mat4 projInverse;
-	PointLight pointLights[];
-	DirectionLight directionLights[];
-	Material triangleMaterials[];
-	Material sphereMaterials[];
+	uint vertexSize;
 } ubo;
 
 layout(location = 0) rayPayloadEXT vec3 hitValue;

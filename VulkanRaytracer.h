@@ -6,6 +6,7 @@
 #include <array>
 #include <chrono>
 #include <numeric>
+#include <map>
 
 #define VK_ENABLE_BETA_EXTENSIONS
 #define GLFW_INCLUDE_VULKAN
@@ -114,7 +115,7 @@ private:
 
 	void createRayTracingPipeline();
 
-	void createUniformBuffer();
+	void createUniformBuffers();
 
 	void handleResize();
 
@@ -254,14 +255,18 @@ private:
 		glm::mat4 viewInverse;
 		glm::mat4 projInverse;
 		uint32_t vertexSize;
-		std::vector<PointLight> pointLights;
+	} uniformData;
+	struct UniformLights {
 		uint32_t pointLightsNum;
-		std::vector<DirectionLight> directLights;
+		std::vector<PointLight> pointLights;
 		uint32_t directLightsNum;
+		std::vector<DirectionLight> directLights;
+	} uniformLights;
+	struct UniformMaterials {
 		std::vector<Material> triangleMaterials;
 		std::vector<Material> sphereMaterials;
-	} uniformData;
-	vks::Buffer ubo;
+	} uniformMaterials;
+	vks::Buffer uboData, uboLights, uboMaterials;
 
 	VkPipeline pipeline;
 	VkPipelineLayout pipelineLayout;
@@ -313,4 +318,14 @@ private:
 	} mouseButtons;
 
 	GLFWwindow* window;
+
+	std::map<std::string, uint32_t> descriptorSetBindings = {
+		{ "accelerationStructure", 0 },
+		{ "resultImage", 1 },
+		{ "uniformBuffer", 2 },
+		{ "vertexBuffer", 3 },
+		{ "indexBuffer", 4 },
+		{ "lightsBuffer", 5 },
+		{ "materialsBuffer", 6 }
+	};
 };

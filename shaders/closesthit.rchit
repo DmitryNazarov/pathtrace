@@ -6,6 +6,14 @@ layout(location = 0) rayPayloadInEXT vec3 hitValue;
 layout(location = 2) rayPayloadEXT bool shadowed;
 hitAttributeEXT vec3 attribs;
 layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
+layout(binding = 2, set = 0) uniform UBO
+{
+	mat4 viewInverse;
+	mat4 projInverse;
+	uint vertexSize;
+} ubo;
+layout(binding = 3, set = 0) buffer Vertices { vec3 v[]; } vertices;
+layout(binding = 4, set = 0) buffer Indices { uint i[]; } indices;
 
 struct PointLight
 {
@@ -13,12 +21,18 @@ struct PointLight
   vec4 color;
   vec3 attenuation;
 };
-
 struct DirectionLight
 {
   vec3 dir;
   vec4 color;
 };
+layout(binding = 5, set = 0) uniform Lights
+{
+	uint pointLightsNum;
+	PointLight pointLights[];
+	uint directLightsNum;
+	DirectionLight directLights[];
+} lights;
 
 struct Material
 {
@@ -28,20 +42,11 @@ struct Material
   vec4 emission;
   float shininess;
 };
-layout(binding = 2, set = 0) uniform UBO
+layout(binding = 6, set = 0) uniform Materials
 {
-	mat4 viewInverse;
-	mat4 projInverse;
-	uint vertexSize;
-	PointLight pointLights[];
-	uint pointLightsNum;
-	DirectionLight directionLights[];
-	uint directionLightsNum;
 	Material triangleMaterials[];
 	Material sphereMaterials[];
-} ubo;
-layout(binding = 3, set = 0) buffer Vertices { vec3 v[]; } vertices;
-layout(binding = 4, set = 0) buffer Indices { uint i[]; } indices;
+} materials;
 
 struct Vertex
 {
@@ -74,10 +79,9 @@ void main()
 	vec3 normal = normalize(v0.normal * barycentricCoords.x + v1.normal * barycentricCoords.y + v2.normal * barycentricCoords.z);
 
 	// Basic lighting
-	vec3 lightVector = normalize(ubo.pointLights[0].pos);
+	vec3 lightVector = normalize(lights.pointLights[0].pos);
 	float dot_product = max(dot(lightVector, normal), 0.2);
-	//hitValue = v0.color.rgb * dot_product;
-	hitValue = vec3(255, 0, 0) * dot_product;
+	hitValue = materials.triangleMaterials[0].diffuse.xyz * dot_product;
 
 	// Shadow casting
 	float tmin = 0.001;

@@ -375,8 +375,6 @@ VulkanRaytracer::~VulkanRaytracer()
 	vkDestroyAccelerationStructureKHR(device, topLevelAS.accelerationStructure, nullptr);
 	shaderBindingTable.destroy();
 	uboData.destroy();
-	uboLights.destroy();
-	uboMaterials.destroy();
 
 	if (bottomLevelAS.objectMemory.memory != VK_NULL_HANDLE) {
 		vkFreeMemory(device, bottomLevelAS.objectMemory.memory, nullptr);
@@ -941,12 +939,12 @@ void VulkanRaytracer::createBottomLevelAccelerationStructure()
 	accelerationStructureGeometry.geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
 	accelerationStructureGeometry.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
 	accelerationStructureGeometry.geometry.triangles.vertexData.deviceAddress = vertexBufferDeviceAddress;
-	accelerationStructureGeometry.geometry.triangles.vertexStride = sizeof(vec3);
+	accelerationStructureGeometry.geometry.triangles.vertexStride = sizeof(Vertex);
 	accelerationStructureGeometry.geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
 	accelerationStructureGeometry.geometry.triangles.indexData.deviceAddress = indexBufferDeviceAddress;
 
-	std::vector<VkAccelerationStructureGeometryKHR> acceleration_geometries = { accelerationStructureGeometry };
-	VkAccelerationStructureGeometryKHR* acceleration_structure_geometries = acceleration_geometries.data();
+	std::vector<VkAccelerationStructureGeometryKHR> accelerationGeometries = { accelerationStructureGeometry };
+	VkAccelerationStructureGeometryKHR* accelerationStructureGeometries = accelerationGeometries.data();
 
 	// Create a small scratch buffer used during build of the bottom level acceleration structure
 	RayTracingScratchBuffer scratchBuffer = createScratchBuffer(bottomLevelAS.accelerationStructure);
@@ -959,7 +957,7 @@ void VulkanRaytracer::createBottomLevelAccelerationStructure()
 	accelerationBuildGeometryInfo.dstAccelerationStructure = bottomLevelAS.accelerationStructure;
 	accelerationBuildGeometryInfo.geometryArrayOfPointers = VK_FALSE;
 	accelerationBuildGeometryInfo.geometryCount = 1;
-	accelerationBuildGeometryInfo.ppGeometries = &acceleration_structure_geometries;
+	accelerationBuildGeometryInfo.ppGeometries = &accelerationStructureGeometries;
 	accelerationBuildGeometryInfo.scratchData.deviceAddress = scratchBuffer.deviceAddress;
 
 	VkAccelerationStructureBuildOffsetInfoKHR accelerationBuildOffsetInfo{};
@@ -1020,13 +1018,13 @@ void VulkanRaytracer::createTopLevelAccelerationStructure()
 	bindAccelerationMemoryInfo.memory = topLevelAS.objectMemory.memory;
 	VK_CHECK_RESULT(vkBindAccelerationStructureMemoryKHR(device, 1, &bindAccelerationMemoryInfo));
 
-	VkTransformMatrixKHR transform_matrix = {
+	VkTransformMatrixKHR transformMatrix = {
 		1.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, 1.0f, 0.0f, 0.0f,
 		0.0f, 0.0f, 1.0f, 0.0f };
 
 	VkAccelerationStructureInstanceKHR instance{};
-	instance.transform = transform_matrix;
+	instance.transform = transformMatrix;
 	instance.instanceCustomIndex = 0;
 	instance.mask = 0xFF;
 	instance.instanceShaderBindingTableRecordOffset = 0;
@@ -1042,19 +1040,16 @@ void VulkanRaytracer::createTopLevelAccelerationStructure()
 		sizeof(instance),
 		&instance));
 
-	VkDeviceOrHostAddressConstKHR instance_data_device_address{};
-	instance_data_device_address.deviceAddress = getBufferDeviceAddress(instancesBuffer.buffer);
-
 	VkAccelerationStructureGeometryKHR accelerationStructureGeometry{};
 	accelerationStructureGeometry.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
 	accelerationStructureGeometry.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
 	accelerationStructureGeometry.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
 	accelerationStructureGeometry.geometry.instances.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
 	accelerationStructureGeometry.geometry.instances.arrayOfPointers = VK_FALSE;
-	accelerationStructureGeometry.geometry.instances.data.deviceAddress = instance_data_device_address.deviceAddress;
+	accelerationStructureGeometry.geometry.instances.data.deviceAddress = getBufferDeviceAddress(instancesBuffer.buffer);
 
-	std::vector<VkAccelerationStructureGeometryKHR> acceleration_geometries = { accelerationStructureGeometry };
-	VkAccelerationStructureGeometryKHR* acceleration_structure_geometries = acceleration_geometries.data();
+	std::vector<VkAccelerationStructureGeometryKHR> accelerationGeometries = { accelerationStructureGeometry };
+	VkAccelerationStructureGeometryKHR* accelerationStructureGeometries = accelerationGeometries.data();
 
 	// Create a small scratch buffer used during build of the top level acceleration structure
 	RayTracingScratchBuffer scratchBuffer = createScratchBuffer(topLevelAS.accelerationStructure);
@@ -1068,7 +1063,7 @@ void VulkanRaytracer::createTopLevelAccelerationStructure()
 	accelerationBuildGeometryInfo.dstAccelerationStructure = topLevelAS.accelerationStructure;
 	accelerationBuildGeometryInfo.geometryArrayOfPointers = VK_FALSE;
 	accelerationBuildGeometryInfo.geometryCount = 1;
-	accelerationBuildGeometryInfo.ppGeometries = &acceleration_structure_geometries;
+	accelerationBuildGeometryInfo.ppGeometries = &accelerationStructureGeometries;
 	accelerationBuildGeometryInfo.scratchData.deviceAddress = scratchBuffer.deviceAddress;
 
 	VkAccelerationStructureBuildOffsetInfoKHR accelerationBuildOffsetInfo{};
@@ -1133,8 +1128,8 @@ void VulkanRaytracer::createDescriptorSets()
 	std::vector<VkDescriptorPoolSize> poolSizes = {
 		{ VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1 },
 		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 3 },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2 }
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 6 }
 	};
 	VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = vks::initializers::descriptorPoolCreateInfo(poolSizes, 1);
 	VK_CHECK_RESULT(vkCreateDescriptorPool(device, &descriptorPoolCreateInfo, nullptr, &descriptorPool));
@@ -1168,12 +1163,30 @@ void VulkanRaytracer::createDescriptorSets()
 	indexBufferDescriptor.buffer = scene.indicesBuf.buffer;
 	indexBufferDescriptor.range = VK_WHOLE_SIZE;
 
+	VkDescriptorBufferInfo pointLightsBufferDescriptor{};
+	pointLightsBufferDescriptor.buffer = scene.pointLightsBuf.buffer;
+	pointLightsBufferDescriptor.range = VK_WHOLE_SIZE;
+
+	VkDescriptorBufferInfo directLightsBufferDescriptor{};
+	directLightsBufferDescriptor.buffer = scene.directLightsBuf.buffer;
+	directLightsBufferDescriptor.range = VK_WHOLE_SIZE;
+
+	VkDescriptorBufferInfo triangleMaterialsBufferDescriptor{};
+	triangleMaterialsBufferDescriptor.buffer = scene.triangleMaterialsBuf.buffer;
+	triangleMaterialsBufferDescriptor.range = VK_WHOLE_SIZE;
+
+	VkDescriptorBufferInfo sphereMaterialsBufferDescriptor{};
+	sphereMaterialsBufferDescriptor.buffer = scene.sphereMaterialsBuf.buffer;
+	sphereMaterialsBufferDescriptor.range = VK_WHOLE_SIZE;
+
 	VkWriteDescriptorSet resultImageWrite = vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, descriptorSetBindings["resultImage"], &storageImageDescriptor);
 	VkWriteDescriptorSet uniformBufferWrite = vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptorSetBindings["uniformBuffer"], &uboData.descriptor);
 	VkWriteDescriptorSet vertexBufferWrite = vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorSetBindings["vertexBuffer"], &vertexBufferDescriptor);
 	VkWriteDescriptorSet indexBufferWrite = vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorSetBindings["indexBuffer"], &indexBufferDescriptor);
-	VkWriteDescriptorSet lightsBufferWrite = vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptorSetBindings["lightsBuffer"], &uboLights.descriptor);
-	VkWriteDescriptorSet materialsBufferWrite = vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptorSetBindings["materialsBuffer"], &uboMaterials.descriptor);
+	VkWriteDescriptorSet pointLightsBufferWrite = vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorSetBindings["pointLightsBuffer"], &pointLightsBufferDescriptor);
+	VkWriteDescriptorSet directLightsBufferWrite = vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorSetBindings["directLightsBuffer"], &directLightsBufferDescriptor);
+	VkWriteDescriptorSet triangleMaterialsBufferWrite = vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorSetBindings["triangleMaterialsBuffer"], &triangleMaterialsBufferDescriptor);
+	VkWriteDescriptorSet sphereMaterialsBufferWrite = vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorSetBindings["sphereMaterialsBuffer"], &sphereMaterialsBufferDescriptor);
 
 	std::vector<VkWriteDescriptorSet> writeDescriptorSets = {
 		accelerationStructureWrite,
@@ -1181,8 +1194,10 @@ void VulkanRaytracer::createDescriptorSets()
 		uniformBufferWrite,
 		vertexBufferWrite,
 		indexBufferWrite,
-		lightsBufferWrite,
-		materialsBufferWrite
+		pointLightsBufferWrite,
+		directLightsBufferWrite,
+		triangleMaterialsBufferWrite,
+		sphereMaterialsBufferWrite
 	};
 	vkUpdateDescriptorSets(device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, VK_NULL_HANDLE);
 }
@@ -1222,17 +1237,29 @@ void VulkanRaytracer::createRayTracingPipeline()
 	indexBufferBinding.descriptorCount = 1;
 	indexBufferBinding.stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
 
-	VkDescriptorSetLayoutBinding uniformLightsBufferBinding{};
-	uniformLightsBufferBinding.binding = descriptorSetBindings["lightsBuffer"];
-	uniformLightsBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	uniformLightsBufferBinding.descriptorCount = 1;
-	uniformLightsBufferBinding.stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR | VK_SHADER_STAGE_MISS_BIT_KHR;
+	VkDescriptorSetLayoutBinding pointLightsBufferBinding{};
+	pointLightsBufferBinding.binding = descriptorSetBindings["pointLightsBuffer"];
+	pointLightsBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	pointLightsBufferBinding.descriptorCount = 1;
+	pointLightsBufferBinding.stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
 
-	VkDescriptorSetLayoutBinding uniformMaterialsBufferBinding{};
-	uniformMaterialsBufferBinding.binding = descriptorSetBindings["materialsBuffer"];
-	uniformMaterialsBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	uniformMaterialsBufferBinding.descriptorCount = 1;
-	uniformMaterialsBufferBinding.stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+	VkDescriptorSetLayoutBinding directLightsBufferBinding{};
+	directLightsBufferBinding.binding = descriptorSetBindings["directLightsBuffer"];
+	directLightsBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	directLightsBufferBinding.descriptorCount = 1;
+	directLightsBufferBinding.stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+
+	VkDescriptorSetLayoutBinding triangleMaterialsBufferBinding{};
+	triangleMaterialsBufferBinding.binding = descriptorSetBindings["triangleMaterialsBuffer"];
+	triangleMaterialsBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	triangleMaterialsBufferBinding.descriptorCount = 1;
+	triangleMaterialsBufferBinding.stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+
+	VkDescriptorSetLayoutBinding sphereMaterialsBufferBinding{};
+	sphereMaterialsBufferBinding.binding = descriptorSetBindings["sphereMaterialsBuffer"];
+	sphereMaterialsBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	sphereMaterialsBufferBinding.descriptorCount = 1;
+	sphereMaterialsBufferBinding.stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
 
 	std::vector<VkDescriptorSetLayoutBinding> bindings({
 		accelerationStructureLayoutBinding,
@@ -1240,8 +1267,10 @@ void VulkanRaytracer::createRayTracingPipeline()
 		uniformDataBufferBinding,
 		vertexBufferBinding,
 		indexBufferBinding,
-		uniformLightsBufferBinding,
-		uniformMaterialsBufferBinding
+		pointLightsBufferBinding,
+		directLightsBufferBinding,
+		triangleMaterialsBufferBinding,
+		sphereMaterialsBufferBinding
 		});
 
 	VkDescriptorSetLayoutCreateInfo descriptorSetlayoutCI{};
@@ -1328,28 +1357,6 @@ void VulkanRaytracer::createUniformBuffers()
 		sizeof(uniformData),
 		&uniformData));
 	VK_CHECK_RESULT(uboData.map());
-
-	VkDeviceSize uniformLightsSize = scene.directLights.size() * sizeof(DirectionLight) +
-		sizeof(uniformLights.directLightsNum) +
-		scene.pointLights.size() * sizeof(PointLight) +
-		sizeof(uniformLights.pointLightsNum);
-	VK_CHECK_RESULT(vulkanDevice->createBuffer(
-		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		&uboLights,
-		uniformLightsSize,
-		&uniformLights));
-	VK_CHECK_RESULT(uboLights.map());
-
-	VkDeviceSize uniformMaterialsSize = scene.triangleMaterials.size() * sizeof(Material) +
-		scene.sphereMaterials.size() * sizeof(Material);
-	VK_CHECK_RESULT(vulkanDevice->createBuffer(
-		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		&uboMaterials,
-		uniformMaterialsSize,
-		&uniformMaterials));
-	VK_CHECK_RESULT(uboMaterials.map());
 
 	updateUniformBuffers();
 }
@@ -1476,19 +1483,9 @@ void VulkanRaytracer::updateUniformBuffers()
 {
 	uniformData.projInverse = glm::inverse(camera.matrices.perspective);
 	uniformData.viewInverse = glm::inverse(camera.matrices.view);
-	uniformData.vertexSize = scene.verticesBuf.count;
+	uniformData.pointLightsNum = scene.pointLightsBuf.count;
+	uniformData.directLightsNum = scene.directLightsBuf.count;
 	memcpy(uboData.mapped, &uniformData, sizeof(uniformData));
-
-	uniformLights.pointLightsNum = scene.pointLights.size();
-	uniformLights.pointLights = scene.pointLights;
-	uniformLights.directLightsNum = scene.directLights.size();
-	uniformLights.directLights = scene.directLights;
-	memcpy(uboLights.mapped, &uniformLights.pointLightsNum, sizeof(uniformLights.pointLightsNum));
-	memcpy(reinterpret_cast<uint32_t*>(uboLights.mapped) + 1, uniformLights.pointLights.data(), uniformLights.pointLights.size() * sizeof(PointLight));
-
-	uniformMaterials.triangleMaterials = scene.triangleMaterials;
-	uniformMaterials.sphereMaterials = scene.sphereMaterials;
-	memcpy(uboMaterials.mapped, uniformMaterials.triangleMaterials.data(), uniformMaterials.triangleMaterials.size() * sizeof(Material));
 }
 
 void VulkanRaytracer::getEnabledFeatures()

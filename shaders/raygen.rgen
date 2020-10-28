@@ -7,7 +7,8 @@ layout(binding = 2, set = 0) uniform UBO
 {
 	mat4 viewInverse;
 	mat4 projInverse;
-	uint vertexSize;
+	uint pointLightsNum;
+	uint directLightsNum;
 } ubo;
 
 layout(location = 0) rayPayloadEXT vec3 hitValue;

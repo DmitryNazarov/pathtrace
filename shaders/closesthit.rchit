@@ -10,9 +10,16 @@ layout(binding = 2, set = 0) uniform UBO
 {
 	mat4 viewInverse;
 	mat4 projInverse;
-	uint vertexSize;
+	uint pointLightsNum;
+	uint directLightsNum;
 } ubo;
-layout(binding = 3, set = 0) buffer Vertices { vec3 v[]; } vertices;
+
+struct Vertex
+{
+  vec3 pos;
+  vec3 normal;
+ };
+layout(binding = 3, set = 0) buffer Vertices { Vertex v[]; } vertices;
 layout(binding = 4, set = 0) buffer Indices { uint i[]; } indices;
 
 struct PointLight
@@ -21,18 +28,14 @@ struct PointLight
   vec4 color;
   vec3 attenuation;
 };
+layout(binding = 5, set = 0) buffer PointLights { PointLight l[]; } pointLights;
+
 struct DirectionLight
 {
   vec3 dir;
   vec4 color;
 };
-layout(binding = 5, set = 0) uniform Lights
-{
-	uint pointLightsNum;
-	PointLight pointLights[];
-	uint directLightsNum;
-	DirectionLight directLights[];
-} lights;
+layout(binding = 6, set = 0) buffer DirectLights { DirectionLight l[]; } directLights;
 
 struct Material
 {
@@ -42,46 +45,33 @@ struct Material
   vec4 emission;
   float shininess;
 };
-layout(binding = 6, set = 0) uniform Materials
-{
-	Material triangleMaterials[];
-	Material sphereMaterials[];
-} materials;
+layout(binding = 7, set = 0) buffer TriangleMaterials { Material m[]; } triangleMaterials;
+layout(binding = 8, set = 0) buffer SphereMaterials { Material m[]; } sphereMaterials;
 
-struct Vertex
+void compute_shading()
 {
-  vec3 pos;
-  vec3 normal;
- };
 
-Vertex unpack(uint index)
-{
-	// Unpack the vertices from the SSBO using the glTF vertex structure
-	// The multiplier is the size of the vertex divided by three float components (=12 bytes)
-	const uint m = ubo.vertexSize / 12;
-	Vertex v;
-	v.pos = vertices.v[m * index + 0];
-	v.normal = vertices.v[m * index + 1];
-
-	return v;
 }
 
 void main()
 {
 	ivec3 index = ivec3(indices.i[3 * gl_PrimitiveID], indices.i[3 * gl_PrimitiveID + 1], indices.i[3 * gl_PrimitiveID + 2]);
 
-	Vertex v0 = unpack(index.x);
-	Vertex v1 = unpack(index.y);
-	Vertex v2 = unpack(index.z);
+	Vertex v0 = Vertex(vertices.v[index.x].pos, vertices.v[index.x].normal);
+	Vertex v1 = Vertex(vertices.v[index.y].pos, vertices.v[index.y].normal);
+	Vertex v2 = Vertex(vertices.v[index.z].pos, vertices.v[index.z].normal);
 
 	// Interpolate normal
 	const vec3 barycentricCoords = vec3(1.0f - attribs.x - attribs.y, attribs.x, attribs.y);
 	vec3 normal = normalize(v0.normal * barycentricCoords.x + v1.normal * barycentricCoords.y + v2.normal * barycentricCoords.z);
 
+	Material mat = triangleMaterials.m[gl_PrimitiveID];
+	compute_shading();
+
 	// Basic lighting
-	vec3 lightVector = normalize(lights.pointLights[0].pos);
+	vec3 lightVector = normalize(pointLights.l[0].pos);
 	float dot_product = max(dot(lightVector, normal), 0.2);
-	hitValue = materials.triangleMaterials[0].diffuse.xyz * dot_product;
+	hitValue = mat.diffuse.rgb * dot_product;
 
 	// Shadow casting
 	float tmin = 0.001;

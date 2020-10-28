@@ -10,19 +10,21 @@ struct Material {
     vec4 diffuse,
     vec4 specular,
     vec4 emission,
-    float shininess) : 
-      ambient(ambient),
-      diffuse(diffuse),
-      specular(specular),
-      emission(emission),
-      shininess(shininess)
+    float shininess) :
+    ambient(ambient),
+    diffuse(diffuse),
+    specular(specular),
+    emission(emission),
+    shininess(shininess)
   {
   }
   vec4 ambient;
   vec4 diffuse;
   vec4 specular;
   vec4 emission;
-  float shininess;
+  // Vulkan alignment requirements:
+  // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/chap14.html#interfaces-resources-layout
+  alignas(16) float shininess;
 };
 
 struct Sphere {

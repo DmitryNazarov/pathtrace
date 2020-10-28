@@ -17,7 +17,6 @@ struct VArray
   VkDeviceMemory memory;
 };
 
-enum class VertexComponent {Position, Normal, Color};
 struct Vertex
 {
   Vertex(const glm::vec3& pos, const glm::vec3& normal) : pos(pos), normal(normal)
@@ -50,7 +49,7 @@ struct Scene
   std::vector<Vertex> vertices;
   std::vector<uint32_t> indices;
 
-  VArray verticesBuf, indicesBuf;
+  VArray verticesBuf, indicesBuf, pointLightsBuf, directLightsBuf, triangleMaterialsBuf, sphereMaterialsBuf;
   void loadVulkanBuffersForScene(vks::VulkanDevice* device, VkQueue transferQueue, VkMemoryPropertyFlags memoryPropertyFlags = 0);
 };
 

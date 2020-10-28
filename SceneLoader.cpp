@@ -259,16 +259,27 @@ void Scene::loadVulkanBuffersForScene(vks::VulkanDevice* device, VkQueue transfe
 {
   verticesBuf.count = vertices.size();
   indicesBuf.count = indices.size();
+  pointLightsBuf.count = pointLights.size();
+  directLightsBuf.count = directLights.size();
+  triangleMaterialsBuf.count = triangleMaterials.size();
+  sphereMaterialsBuf.count = sphereMaterials.size();
   size_t vertexSize = vertices.size() * sizeof(Vertex);
   size_t indexSize = indices.size() * sizeof(uint32_t);
+  size_t pointLightsSize = pointLights.size() * sizeof(PointLight);
+  size_t directLightsSize = directLights.size() * sizeof(DirectionLight);
+  size_t triangleMaterialsSize = triangleMaterials.size() * sizeof(Material);
+  size_t sphereMaterialsSize = sphereMaterials.size() * sizeof(Material);
+  if (!sphereMaterialsSize) sphereMaterialsSize = 1; //fix
 
   struct StagingBuffer {
     VkBuffer buffer;
     VkDeviceMemory memory;
-  } vertexStaging, indexStaging;
+  };
+  StagingBuffer vertexStaging, indexStaging,
+    pointLightsStaging, directLightsStaging,
+    triangleMaterialsStaging, sphereMaterialsStaging;
 
   // Create staging buffers
-  // Vertex data
   VK_CHECK_RESULT(device->createBuffer(
     VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -276,7 +287,6 @@ void Scene::loadVulkanBuffersForScene(vks::VulkanDevice* device, VkQueue transfe
     &vertexStaging.buffer,
     &vertexStaging.memory,
     vertices.data()));
-  // Index data
   VK_CHECK_RESULT(device->createBuffer(
     VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -284,22 +294,72 @@ void Scene::loadVulkanBuffersForScene(vks::VulkanDevice* device, VkQueue transfe
     &indexStaging.buffer,
     &indexStaging.memory,
     indices.data()));
+  VK_CHECK_RESULT(device->createBuffer(
+    VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    pointLightsSize,
+    &pointLightsStaging.buffer,
+    &pointLightsStaging.memory,
+    pointLights.data()));
+  VK_CHECK_RESULT(device->createBuffer(
+    VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    directLightsSize,
+    &directLightsStaging.buffer,
+    &directLightsStaging.memory,
+    directLights.data()));
+  VK_CHECK_RESULT(device->createBuffer(
+    VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    triangleMaterialsSize,
+    &triangleMaterialsStaging.buffer,
+    &triangleMaterialsStaging.memory,
+    triangleMaterials.data()));
+  VK_CHECK_RESULT(device->createBuffer(
+    VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    sphereMaterialsSize,
+    &sphereMaterialsStaging.buffer,
+    &sphereMaterialsStaging.memory,
+    sphereMaterials.data()));
 
   // Create device local buffers
-  // Vertex buffer
   VK_CHECK_RESULT(device->createBuffer(
     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | memoryPropertyFlags,
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     vertexSize,
     &verticesBuf.buffer,
     &verticesBuf.memory));
-  // Index buffer
   VK_CHECK_RESULT(device->createBuffer(
     VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | memoryPropertyFlags,
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     indexSize,
     &indicesBuf.buffer,
     &indicesBuf.memory));
+  VK_CHECK_RESULT(device->createBuffer(
+    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | memoryPropertyFlags,
+    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    pointLightsSize,
+    &pointLightsBuf.buffer,
+    &pointLightsBuf.memory));
+  VK_CHECK_RESULT(device->createBuffer(
+    VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | memoryPropertyFlags,
+    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    directLightsSize,
+    &directLightsBuf.buffer,
+    &directLightsBuf.memory));
+  VK_CHECK_RESULT(device->createBuffer(
+    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | memoryPropertyFlags,
+    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    triangleMaterialsSize,
+    &triangleMaterialsBuf.buffer,
+    &triangleMaterialsBuf.memory));
+  VK_CHECK_RESULT(device->createBuffer(
+    VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | memoryPropertyFlags,
+    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    sphereMaterialsSize,
+    &sphereMaterialsBuf.buffer,
+    &sphereMaterialsBuf.memory));
 
   // Copy from staging buffers
   VkCommandBuffer copyCmd = device->createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
@@ -312,10 +372,30 @@ void Scene::loadVulkanBuffersForScene(vks::VulkanDevice* device, VkQueue transfe
   copyRegion.size = indexSize;
   vkCmdCopyBuffer(copyCmd, indexStaging.buffer, indicesBuf.buffer, 1, &copyRegion);
 
+  copyRegion.size = pointLightsSize;
+  vkCmdCopyBuffer(copyCmd, pointLightsStaging.buffer, pointLightsBuf.buffer, 1, &copyRegion);
+
+  copyRegion.size = directLightsSize;
+  vkCmdCopyBuffer(copyCmd, directLightsStaging.buffer, directLightsBuf.buffer, 1, &copyRegion);
+
+  copyRegion.size = triangleMaterialsSize;
+  vkCmdCopyBuffer(copyCmd, triangleMaterialsStaging.buffer, triangleMaterialsBuf.buffer, 1, &copyRegion);
+
+  copyRegion.size = sphereMaterialsSize;
+  vkCmdCopyBuffer(copyCmd, sphereMaterialsStaging.buffer, sphereMaterialsBuf.buffer, 1, &copyRegion);
+
   device->flushCommandBuffer(copyCmd, transferQueue, true);
 
   vkDestroyBuffer(device->logicalDevice, vertexStaging.buffer, nullptr);
   vkFreeMemory(device->logicalDevice, vertexStaging.memory, nullptr);
   vkDestroyBuffer(device->logicalDevice, indexStaging.buffer, nullptr);
   vkFreeMemory(device->logicalDevice, indexStaging.memory, nullptr);
+  vkDestroyBuffer(device->logicalDevice, pointLightsStaging.buffer, nullptr);
+  vkFreeMemory(device->logicalDevice, pointLightsStaging.memory, nullptr);
+  vkDestroyBuffer(device->logicalDevice, directLightsStaging.buffer, nullptr);
+  vkFreeMemory(device->logicalDevice, directLightsStaging.memory, nullptr);
+  vkDestroyBuffer(device->logicalDevice, triangleMaterialsStaging.buffer, nullptr);
+  vkFreeMemory(device->logicalDevice, triangleMaterialsStaging.memory, nullptr);
+  vkDestroyBuffer(device->logicalDevice, sphereMaterialsStaging.buffer, nullptr);
+  vkFreeMemory(device->logicalDevice, sphereMaterialsStaging.memory, nullptr);
 }

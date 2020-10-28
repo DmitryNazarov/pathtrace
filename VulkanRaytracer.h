@@ -101,7 +101,7 @@ private:
 
 	RayTracingObjectMemory createObjectMemory(VkAccelerationStructureKHR acceleration_structure);
 
-	uint64_t getBufferDeviceAddress(VkBuffer buffer);
+	VkDeviceAddress getBufferDeviceAddress(VkBuffer buffer);
 
 	void createStorageImage();
 
@@ -254,19 +254,10 @@ private:
 	struct UniformData {
 		glm::mat4 viewInverse;
 		glm::mat4 projInverse;
-		uint32_t vertexSize;
-	} uniformData;
-	struct UniformLights {
 		uint32_t pointLightsNum;
-		std::vector<PointLight> pointLights;
 		uint32_t directLightsNum;
-		std::vector<DirectionLight> directLights;
-	} uniformLights;
-	struct UniformMaterials {
-		std::vector<Material> triangleMaterials;
-		std::vector<Material> sphereMaterials;
-	} uniformMaterials;
-	vks::Buffer uboData, uboLights, uboMaterials;
+	} uniformData;
+	vks::Buffer uboData;
 
 	VkPipeline pipeline;
 	VkPipelineLayout pipelineLayout;
@@ -325,7 +316,9 @@ private:
 		{ "uniformBuffer", 2 },
 		{ "vertexBuffer", 3 },
 		{ "indexBuffer", 4 },
-		{ "lightsBuffer", 5 },
-		{ "materialsBuffer", 6 }
+		{ "pointLightsBuffer", 5 },
+		{ "directLightsBuffer", 6 },
+		{ "triangleMaterialsBuffer", 7 },
+		{ "sphereMaterialsBuffer", 8 }
 	};
 };

@@ -269,7 +269,9 @@ void Scene::loadVulkanBuffersForScene(vks::VulkanDevice* device, VkQueue transfe
   size_t directLightsSize = directLights.size() * sizeof(DirectionLight);
   size_t triangleMaterialsSize = triangleMaterials.size() * sizeof(Material);
   size_t sphereMaterialsSize = sphereMaterials.size() * sizeof(Material);
-  if (!sphereMaterialsSize) sphereMaterialsSize = 1; //fix
+  if (!sphereMaterialsSize) sphereMaterialsSize = 1; //fix it
+  if (!directLightsSize) directLightsSize = 1; //fix it
+  if (!pointLightsSize) pointLightsSize = 1; //fix it
 
   struct StagingBuffer {
     VkBuffer buffer;

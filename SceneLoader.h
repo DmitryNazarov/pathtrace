@@ -21,8 +21,8 @@ struct Vertex
 {
   Vertex(const glm::vec3& pos, const glm::vec3& normal) : pos(pos), normal(normal)
   {}
-  glm::vec3 pos;
-  glm::vec3 normal;
+  alignas(16) glm::vec3 pos;
+  alignas(16) glm::vec3 normal;
 };
 
 struct Scene

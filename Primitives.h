@@ -36,8 +36,8 @@ struct Sphere {
 
 struct DirectionLight {
   DirectionLight(const vec3& dir, const vec4& color) : dir(dir), color(color) {}
-  vec3 dir;
-  vec4 color;
+  alignas(16) vec3 dir;
+  alignas(16) vec4 color;
 };
 
 struct PointLight {
@@ -45,9 +45,9 @@ struct PointLight {
     pos(pos), color(color), attenuation(attenuation)
   {}
 
-  vec3 pos;
-  vec4 color;
-  vec3 attenuation{ 1.0f, 0.0f, 0.0f };
+  alignas(16) vec3 pos;
+  alignas(16) vec4 color;
+  alignas(16) vec3 attenuation{ 1.0f, 0.0f, 0.0f };
 };
 
 #endif // PRIMITIVES_H

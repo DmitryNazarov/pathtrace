@@ -72,13 +72,6 @@ namespace vks
 			const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
 			void* pUserData)
 		{
-			if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT ||
-				messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
-			{
-				return VK_FALSE;
-			}
-
-
 			// Select prefix depending on flags passed to the callback
 			std::string prefix("");
 
@@ -114,7 +107,7 @@ namespace vks
 			return VK_FALSE;
 		}
 
-		void setupDebugging(VkInstance instance, VkDebugReportFlagsEXT flags, VkDebugReportCallbackEXT callBack)
+		void setupDebugging(VkInstance instance)
 		{
 
 			vkCreateDebugUtilsMessengerEXT = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT"));

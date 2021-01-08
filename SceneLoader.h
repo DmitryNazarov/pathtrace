@@ -17,14 +17,6 @@ struct VArray
   VkDeviceMemory memory;
 };
 
-struct Vertex
-{
-  Vertex(const glm::vec3& pos, const glm::vec3& normal) : pos(pos), normal(normal)
-  {}
-  alignas(16) glm::vec3 pos;
-  alignas(16) glm::vec3 normal;
-};
-
 struct Scene
 {
   size_t width = 640, height = 480;
@@ -36,20 +28,17 @@ struct Scene
   vec3 up_init;
   float fovy = 90;
 
-  vec3 w, u, v;
-
-  std::vector<Sphere> spheres;
-
   std::vector<DirectionLight> directLights;
   std::vector<PointLight> pointLights;
+
+  std::vector<Sphere> spheres;
+  std::vector<Vertex> vertices;
+  std::vector<uint32_t> indices;
 
   std::vector<Material> triangleMaterials;
   std::vector<Material> sphereMaterials;
 
-  std::vector<Vertex> vertices;
-  std::vector<uint32_t> indices;
-
-  VArray verticesBuf, indicesBuf, pointLightsBuf, directLightsBuf, triangleMaterialsBuf, sphereMaterialsBuf;
+  VArray verticesBuf, indicesBuf, spheresBuf, pointLightsBuf, directLightsBuf, triangleMaterialsBuf, sphereMaterialsBuf;
   void loadVulkanBuffersForScene(vks::VulkanDevice* device, VkQueue transferQueue, VkMemoryPropertyFlags memoryPropertyFlags = 0);
 };
 

@@ -316,9 +316,10 @@ private:
 		{ "uniformBuffer", 2 },
 		{ "vertexBuffer", 3 },
 		{ "indexBuffer", 4 },
-		{ "pointLightsBuffer", 5 },
-		{ "directLightsBuffer", 6 },
-		{ "triangleMaterialsBuffer", 7 },
-		{ "sphereMaterialsBuffer", 8 }
+		{ "sphereBuffer", 5 },
+		{ "pointLightsBuffer", 6 },
+		{ "directLightsBuffer", 7 },
+		{ "triangleMaterialsBuffer", 8 },
+		{ "sphereMaterialsBuffer", 9 }
 	};
 };

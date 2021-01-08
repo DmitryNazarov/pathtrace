@@ -62,10 +62,6 @@ Scene loadScene(const std::string& filename) {
         scene.center = vec3(values[3], -values[4], -values[5]);
         scene.up_init = vec3(values[6], -values[7], -values[8]);
         scene.fovy = values[9];
-
-        scene.w = normalize(scene.eye_init - scene.center);
-        scene.u = normalize(cross(scene.up_init, scene.w));
-        scene.v = cross(scene.w, scene.u);
       }
     }
     else if (cmd == "maxdepth") {
@@ -81,26 +77,16 @@ Scene loadScene(const std::string& filename) {
       }
     }
     else if (cmd == "sphere") {
-      continue; //fix it
-
-      //float values[4];
-      //if (readvals(ss, 4, values)) {
-      //  Sphere s;
-      //  s.radius = values[3];
-      //  s.pos = vec3(values[0], values[1], values[2]);
-      //  s.transform = transfstack.top();
-      //  s.inverted_transform = inverse(transfstack.top());
-      //  s.material.ambient = ambient;
-      //  s.material.diffuse = diffuse;
-      //  s.material.specular = specular;
-      //  s.material.emission = emission;
-      //  s.material.shininess = shininess;
-      //  settings.spheres.push_back(s);
-      //  Object o;
-      //  o.type = SPHERE;
-      //  o.index = settings.spheres.size() - 1;
-      //  settings.objects.push_back(o);
-      //}
+      float values[4];
+      if (readvals(ss, 4, values)) {
+        Sphere s;
+        s.pos = vec3(values[0], values[1], values[2]);
+        s.radius = values[3];
+        s.transform = transfstack.top();
+        s.invertedTransform = inverse(transfstack.top());
+        scene.spheres.push_back(std::move(s));
+        scene.sphereMaterials.emplace_back(ambient, diffuse, specular, emission, shininess);
+      }
     }
     else if (cmd == "translate") {
       float values[3];
@@ -259,25 +245,29 @@ void Scene::loadVulkanBuffersForScene(vks::VulkanDevice* device, VkQueue transfe
 {
   verticesBuf.count = vertices.size();
   indicesBuf.count = indices.size();
+  spheresBuf.count = spheres.size();
   pointLightsBuf.count = pointLights.size();
   directLightsBuf.count = directLights.size();
   triangleMaterialsBuf.count = triangleMaterials.size();
   sphereMaterialsBuf.count = sphereMaterials.size();
   size_t vertexSize = vertices.size() * sizeof(Vertex);
   size_t indexSize = indices.size() * sizeof(uint32_t);
+  size_t spheresSize = spheres.size() * sizeof(Sphere);
   size_t pointLightsSize = pointLights.size() * sizeof(PointLight);
   size_t directLightsSize = directLights.size() * sizeof(DirectionLight);
   size_t triangleMaterialsSize = triangleMaterials.size() * sizeof(Material);
   size_t sphereMaterialsSize = sphereMaterials.size() * sizeof(Material);
+  if (!spheresSize) spheresSize = 1; //fix it
   if (!sphereMaterialsSize) sphereMaterialsSize = 1; //fix it
   if (!directLightsSize) directLightsSize = 1; //fix it
+  if (!pointLightsSize) pointLightsSize = 1; //fix it
   if (!pointLightsSize) pointLightsSize = 1; //fix it
 
   struct StagingBuffer {
     VkBuffer buffer;
     VkDeviceMemory memory;
   };
-  StagingBuffer vertexStaging, indexStaging,
+  StagingBuffer vertexStaging, indexStaging, sphereStaging,
     pointLightsStaging, directLightsStaging,
     triangleMaterialsStaging, sphereMaterialsStaging;
 
@@ -296,6 +286,13 @@ void Scene::loadVulkanBuffersForScene(vks::VulkanDevice* device, VkQueue transfe
     &indexStaging.buffer,
     &indexStaging.memory,
     indices.data()));
+  VK_CHECK_RESULT(device->createBuffer(
+    VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    spheresSize,
+    &sphereStaging.buffer,
+    &sphereStaging.memory,
+    spheres.data()));
   VK_CHECK_RESULT(device->createBuffer(
     VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -341,6 +338,12 @@ void Scene::loadVulkanBuffersForScene(vks::VulkanDevice* device, VkQueue transfe
   VK_CHECK_RESULT(device->createBuffer(
     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | memoryPropertyFlags,
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    spheresSize,
+    &spheresBuf.buffer,
+    &spheresBuf.memory));
+  VK_CHECK_RESULT(device->createBuffer(
+    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | memoryPropertyFlags,
+    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     pointLightsSize,
     &pointLightsBuf.buffer,
     &pointLightsBuf.memory));
@@ -374,6 +377,9 @@ void Scene::loadVulkanBuffersForScene(vks::VulkanDevice* device, VkQueue transfe
   copyRegion.size = indexSize;
   vkCmdCopyBuffer(copyCmd, indexStaging.buffer, indicesBuf.buffer, 1, &copyRegion);
 
+  copyRegion.size = spheresSize;
+  vkCmdCopyBuffer(copyCmd, sphereStaging.buffer, spheresBuf.buffer, 1, &copyRegion);
+
   copyRegion.size = pointLightsSize;
   vkCmdCopyBuffer(copyCmd, pointLightsStaging.buffer, pointLightsBuf.buffer, 1, &copyRegion);
 
@@ -392,6 +398,8 @@ void Scene::loadVulkanBuffersForScene(vks::VulkanDevice* device, VkQueue transfe
   vkFreeMemory(device->logicalDevice, vertexStaging.memory, nullptr);
   vkDestroyBuffer(device->logicalDevice, indexStaging.buffer, nullptr);
   vkFreeMemory(device->logicalDevice, indexStaging.memory, nullptr);
+  vkDestroyBuffer(device->logicalDevice, sphereStaging.buffer, nullptr);
+  vkFreeMemory(device->logicalDevice, sphereStaging.memory, nullptr);
   vkDestroyBuffer(device->logicalDevice, pointLightsStaging.buffer, nullptr);
   vkFreeMemory(device->logicalDevice, pointLightsStaging.memory, nullptr);
   vkDestroyBuffer(device->logicalDevice, directLightsStaging.buffer, nullptr);

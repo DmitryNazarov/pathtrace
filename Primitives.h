@@ -27,11 +27,18 @@ struct Material {
   alignas(16) float shininess;
 };
 
+struct Vertex
+{
+  Vertex(const glm::vec3& pos, const glm::vec3& normal) : pos(pos), normal(normal)
+  {}
+  alignas(16) glm::vec3 pos;
+  alignas(16) glm::vec3 normal;
+};
+
 struct Sphere {
-  float radius;
-  vec3 pos;
-  Material material;
-  mat4 transform{1.0f}, inverted_transform{ 1.0f };
+  alignas(16) vec3 pos;
+  alignas(16) float radius;
+  alignas(16) mat4 transform{1.0f}, invertedTransform{1.0f};
 };
 
 struct DirectionLight {

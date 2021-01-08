@@ -1162,6 +1162,10 @@ void VulkanRaytracer::createDescriptorSets()
 	indexBufferDescriptor.buffer = scene.indicesBuf.buffer;
 	indexBufferDescriptor.range = VK_WHOLE_SIZE;
 
+	VkDescriptorBufferInfo sphereBufferDescriptor{};
+	sphereBufferDescriptor.buffer = scene.spheresBuf.buffer;
+	sphereBufferDescriptor.range = VK_WHOLE_SIZE;
+
 	VkDescriptorBufferInfo pointLightsBufferDescriptor{};
 	pointLightsBufferDescriptor.buffer = scene.pointLightsBuf.buffer;
 	pointLightsBufferDescriptor.range = VK_WHOLE_SIZE;
@@ -1181,6 +1185,7 @@ void VulkanRaytracer::createDescriptorSets()
 	VkWriteDescriptorSet resultImageWrite = vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, descriptorSetBindings["resultImage"], &storageImageDescriptor);
 	VkWriteDescriptorSet uniformBufferWrite = vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptorSetBindings["uniformBuffer"], &uboData.descriptor);
 	VkWriteDescriptorSet vertexBufferWrite = vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorSetBindings["vertexBuffer"], &vertexBufferDescriptor);
+	VkWriteDescriptorSet sphereBufferWrite = vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorSetBindings["sphereBuffer"], &sphereBufferDescriptor);
 	VkWriteDescriptorSet indexBufferWrite = vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorSetBindings["indexBuffer"], &indexBufferDescriptor);
 	VkWriteDescriptorSet pointLightsBufferWrite = vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorSetBindings["pointLightsBuffer"], &pointLightsBufferDescriptor);
 	VkWriteDescriptorSet directLightsBufferWrite = vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorSetBindings["directLightsBuffer"], &directLightsBufferDescriptor);
@@ -1193,6 +1198,7 @@ void VulkanRaytracer::createDescriptorSets()
 		uniformBufferWrite,
 		vertexBufferWrite,
 		indexBufferWrite,
+		sphereBufferWrite,
 		pointLightsBufferWrite,
 		directLightsBufferWrite,
 		triangleMaterialsBufferWrite,
@@ -1236,6 +1242,12 @@ void VulkanRaytracer::createRayTracingPipeline()
 	indexBufferBinding.descriptorCount = 1;
 	indexBufferBinding.stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
 
+	VkDescriptorSetLayoutBinding sphereBufferBinding{};
+	sphereBufferBinding.binding = descriptorSetBindings["sphereBuffer"];
+	sphereBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	sphereBufferBinding.descriptorCount = 1;
+	sphereBufferBinding.stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+
 	VkDescriptorSetLayoutBinding pointLightsBufferBinding{};
 	pointLightsBufferBinding.binding = descriptorSetBindings["pointLightsBuffer"];
 	pointLightsBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -1266,6 +1278,7 @@ void VulkanRaytracer::createRayTracingPipeline()
 		uniformDataBufferBinding,
 		vertexBufferBinding,
 		indexBufferBinding,
+		sphereBufferBinding,
 		pointLightsBufferBinding,
 		directLightsBufferBinding,
 		triangleMaterialsBufferBinding,

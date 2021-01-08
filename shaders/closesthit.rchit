@@ -22,20 +22,28 @@ struct Vertex
 layout(binding = 3, set = 0) buffer Vertices { Vertex v[]; } vertices;
 layout(binding = 4, set = 0) buffer Indices { uint i[]; } indices;
 
+struct Sphere
+{
+  vec3 pos;
+  float r;
+  mat4 transform, invertedTransform;
+};
+layout(binding = 5, set = 0) buffer Spheres { Sphere s[]; } spheres;
+
 struct PointLight
 {
   vec3 pos;
   vec4 color;
   vec3 attenuation;
 };
-layout(binding = 5, set = 0) buffer PointLights { PointLight l[]; } pointLights;
+layout(binding = 6, set = 0) buffer PointLights { PointLight l[]; } pointLights;
 
 struct DirectionLight
 {
   vec3 dir;
   vec4 color;
 };
-layout(binding = 6, set = 0) buffer DirectLights { DirectionLight l[]; } directLights;
+layout(binding = 7, set = 0) buffer DirectLights { DirectionLight l[]; } directLights;
 
 struct Material
 {
@@ -45,8 +53,8 @@ struct Material
   vec4 emission;
   float shininess;
 };
-layout(binding = 7, set = 0) buffer TriangleMaterials { Material m[]; } triangleMaterials;
-layout(binding = 8, set = 0) buffer SphereMaterials { Material m[]; } sphereMaterials;
+layout(binding = 8, set = 0) buffer TriangleMaterials { Material m[]; } triangleMaterials;
+layout(binding = 9, set = 0) buffer SphereMaterials { Material m[]; } sphereMaterials;
 
 void traceRay(vec3 origin, vec3 dir)
 {

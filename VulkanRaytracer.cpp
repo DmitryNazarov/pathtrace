@@ -347,8 +347,8 @@ VulkanRaytracer::VulkanRaytracer(const std::vector<std::string>& args)
 
 	//scene = loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene1.test");
 	//scene = loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\test_scene.test");
-	scene = loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene2.test");
-	//scene = loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene3.test");
+	//scene = loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene2.test");
+	scene = loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene3.test");
 
 	height = scene.height;
 	width = scene.width;

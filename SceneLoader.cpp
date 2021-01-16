@@ -95,19 +95,19 @@ Scene loadScene(const std::string& filename) {
     else if (cmd == "translate") {
       float values[3];
       if (readvals(ss, 3, values)) {
-        transfstack.top() = translate(transfstack.top(), vec3(values[0], values[1], values[2]));
+        transfstack.top() = translate(transfstack.top(), vec3(values[0], -values[1], -values[2]));
       }
     }
     else if (cmd == "scale") {
       float values[3];
       if (readvals(ss, 3, values)) {
-        transfstack.top() = scale(transfstack.top(), vec3(values[0], values[1], values[2]));
+        transfstack.top() = scale(transfstack.top(), vec3(values[0], -values[1], -values[2]));
       }
     }
     else if (cmd == "rotate") {
       float values[4];
       if (readvals(ss, 4, values)) {
-        vec3 axis = normalize(vec3(values[0], values[1], values[2]));
+        vec3 axis = normalize(vec3(values[0], -values[1], -values[2]));
         transfstack.top() = rotate(transfstack.top(), radians(values[3]), axis);
       }
     }
@@ -152,34 +152,6 @@ Scene loadScene(const std::string& filename) {
         scene.triangleMaterials.emplace_back(ambient, diffuse, specular, emission, shininess);
       }
     }
-    //else if (cmd == "trinormal") {
-    //  int values[3];
-    //  if (readvals(ss, 3, values)) {
-    //    TriangleNormals t;
-    //    t.vertices.push_back(transfstack.top() *
-    //      vec4(vertex_normals[values[0]].first, 1.0f));
-    //    t.vertices.push_back(transfstack.top() *
-    //      vec4(vertex_normals[values[1]].first, 1.0f));
-    //    t.vertices.push_back(transfstack.top() *
-    //      vec4(vertex_normals[values[2]].first, 1.0f));
-    //    t.vertices.push_back(transfstack.top() *
-    //      vec4(vertex_normals[values[0]].second, 1.0f));
-    //    t.vertices.push_back(transfstack.top() *
-    //      vec4(vertex_normals[values[1]].second, 1.0f));
-    //    t.vertices.push_back(transfstack.top() *
-    //      vec4(vertex_normals[values[2]].second, 1.0f));
-    //    t.material.ambient = ambient;
-    //    t.material.diffuse = diffuse;
-    //    t.material.specular = specular;
-    //    t.material.emission = emission;
-    //    t.material.shininess = shininess;
-    //    settings.triangle_normals.push_back(t);
-    //    Object o;
-    //    o.type = TRIANGLE_NORMALS;
-    //    o.index = settings.triangle_normals.size() - 1;
-    //    settings.objects.push_back(o);
-    //  }
-    //}
     else if (cmd == "directional") {
       float values[6];
       if (readvals(ss, 6, values)) {

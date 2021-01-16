@@ -32,3 +32,15 @@ struct Material
   vec4 emission;
   float shininess;
 };
+
+vec4 computeLight(vec3 direction, vec4 lightcolor, vec3 normal,
+	vec3 halfvec, vec4 diffuse, vec4 specular, float shininess)
+{
+	float nDotL = dot(normal, direction);
+	vec4 lambert = diffuse * max(nDotL, 0.0f);
+
+	float nDotH = dot(normal, halfvec);
+	vec4 phong = specular * pow(max(nDotH, 0.0f), shininess);
+
+	return lightcolor * (lambert + phong);
+}

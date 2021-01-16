@@ -15,13 +15,11 @@ layout(binding = 2, set = 0) uniform UBO
 	uint pointLightsNum;
 	uint directLightsNum;
 } ubo;
-
 layout(binding = 3, set = 0) buffer Vertices { Vertex v[]; } vertices;
 layout(binding = 4, set = 0) buffer Indices { uint i[]; } indices;
 layout(binding = 6, set = 0) buffer PointLights { PointLight l[]; } pointLights;
 layout(binding = 7, set = 0) buffer DirectLights { DirectionLight l[]; } directLights;
 layout(binding = 8, set = 0) buffer TriangleMaterials { Material m[]; } triangleMaterials;
-layout(binding = 9, set = 0) buffer SphereMaterials { Material m[]; } sphereMaterials;
 
 void traceRay(vec3 origin, vec3 dir)
 {
@@ -30,18 +28,6 @@ void traceRay(vec3 origin, vec3 dir)
 	float tmax = 10000.0;
 	traceRayEXT(topLevelAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT,
 		0xFF, 1, 0, 1, origin, tmin, dir, tmax, 2);
-}
-
-vec4 computeLight(vec3 direction, vec4 lightcolor, vec3 normal,
-	vec3 halfvec, vec4 diffuse, vec4 specular, float shininess)
-{
-	float nDotL = dot(normal, direction);
-	vec4 lambert = diffuse * max(nDotL, 0.0f);
-
-	float nDotH = dot(normal, halfvec);
-	vec4 phong = specular * pow(max(nDotH, 0.0f), shininess);
-
-	return lightcolor * (lambert + phong);
 }
 
 vec4 computeShading(vec3 point, vec3 eye, vec3 normal, Material m)

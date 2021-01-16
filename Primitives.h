@@ -31,14 +31,20 @@ struct Vertex
 {
   Vertex(const glm::vec3& pos, const glm::vec3& normal) : pos(pos), normal(normal)
   {}
-  alignas(16) glm::vec3 pos;
-  alignas(16) glm::vec3 normal;
+  glm::vec3 pos;
+  glm::vec3 normal;
 };
 
 struct Sphere {
-  alignas(16) vec3 pos;
-  alignas(16) float radius;
+  vec3 pos;
+  float radius;
   alignas(16) mat4 transform{1.0f}, invertedTransform{1.0f};
+};
+
+struct Aabb
+{
+  vec3 minimum;
+  vec3 maximum;
 };
 
 struct DirectionLight {

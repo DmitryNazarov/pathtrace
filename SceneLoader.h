@@ -32,13 +32,14 @@ struct Scene
   std::vector<PointLight> pointLights;
 
   std::vector<Sphere> spheres;
+  std::vector<Aabb> aabbs;
   std::vector<Vertex> vertices;
   std::vector<uint32_t> indices;
 
   std::vector<Material> triangleMaterials;
   std::vector<Material> sphereMaterials;
 
-  VArray verticesBuf, indicesBuf, spheresBuf, pointLightsBuf, directLightsBuf, triangleMaterialsBuf, sphereMaterialsBuf;
+  VArray verticesBuf, indicesBuf, spheresBuf, aabbsBuf, pointLightsBuf, directLightsBuf, triangleMaterialsBuf, sphereMaterialsBuf;
   void loadVulkanBuffersForScene(vks::VulkanDevice* device, VkQueue transferQueue, VkMemoryPropertyFlags memoryPropertyFlags = 0);
 };
 

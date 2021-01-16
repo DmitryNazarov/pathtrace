@@ -8,7 +8,8 @@
 #include <numeric>
 #include <map>
 
-#define VK_ENABLE_BETA_EXTENSIONS
+#define NOMINMAX
+//#define VK_ENABLE_BETA_EXTENSIONS
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -32,32 +33,25 @@
 
 
 // Holds data for a ray tracing scratch buffer that is used as a temporary storage
-struct RayTracingScratchBuffer
+struct ScratchBuffer
 {
 	uint64_t deviceAddress = 0;
-	VkBuffer buffer = VK_NULL_HANDLE;
-	VkDeviceMemory memory = VK_NULL_HANDLE;
-};
-
-// Holds data for a memory object bound to an acceleration structure
-struct RayTracingObjectMemory
-{
-	uint64_t deviceAddress = 0;
+	VkBuffer handle = VK_NULL_HANDLE;
 	VkDeviceMemory memory = VK_NULL_HANDLE;
 };
 
 // Ray tracing acceleration structure
 struct AccelerationStructure {
-	VkAccelerationStructureKHR accelerationStructure;
-	uint64_t handle;
-	RayTracingObjectMemory objectMemory;
+	VkAccelerationStructureKHR handle;
+	uint64_t deviceAddress = 0;
+	VkDeviceMemory memory = VK_NULL_HANDLE;
+	VkBuffer buffer;
 };
 
-// Indices for the different ray tracing groups used in this example
-#define INDEX_RAYGEN_GROUP 0
-#define INDEX_MISS_GROUP 1
-#define INDEX_CLOSEST_HIT_GROUP 3
-
+class ShaderBindingTable : public vks::Buffer {
+public:
+	VkStridedDeviceAddressRegionKHR stridedDeviceAddressRegion{};
+};
 
 class VulkanRaytracer
 {
@@ -96,20 +90,20 @@ private:
 	/** @brief (Virtual) Default image acquire + submission and command buffer submission function */
 	virtual void renderFrame();
 
-	RayTracingScratchBuffer createScratchBuffer(VkAccelerationStructureKHR accelerationStructure);
-	void deleteScratchBuffer(RayTracingScratchBuffer& scratchBuffer);
-
-	RayTracingObjectMemory createObjectMemory(VkAccelerationStructureKHR acceleration_structure);
+	ScratchBuffer createScratchBuffer(VkDeviceSize size);
+	void deleteScratchBuffer(ScratchBuffer& scratchBuffer);
 
 	VkDeviceAddress getBufferDeviceAddress(VkBuffer buffer);
 
 	void createStorageImage();
 
-	void createBottomLevelAccelerationStructure();
-
+	void createAccelerationStructure(AccelerationStructure& accelerationStructure, VkAccelerationStructureTypeKHR type, VkAccelerationStructureBuildSizesInfoKHR buildSizeInfo);
+	void deleteAccelerationStructure(AccelerationStructure& accelerationStructure);
+	void createBottomLevelAccelerationStructureTriangles();
+	void createBottomLevelAccelerationStructureSpheres();
 	void createTopLevelAccelerationStructure();
 
-	void createShaderBindingTable();
+	void createShaderBindingTables();
 
 	void createDescriptorSets();
 
@@ -221,24 +215,26 @@ private:
 	Scene scene;
 
 	PFN_vkGetBufferDeviceAddressKHR vkGetBufferDeviceAddressKHR = nullptr;
-	PFN_vkBindAccelerationStructureMemoryKHR vkBindAccelerationStructureMemoryKHR = nullptr;
+	PFN_vkCmdBuildAccelerationStructuresKHR vkCmdBuildAccelerationStructuresKHR = nullptr;
+	PFN_vkBuildAccelerationStructuresKHR vkBuildAccelerationStructuresKHR = nullptr;
 	PFN_vkCreateAccelerationStructureKHR vkCreateAccelerationStructureKHR = nullptr;
 	PFN_vkDestroyAccelerationStructureKHR vkDestroyAccelerationStructureKHR = nullptr;
-	PFN_vkGetAccelerationStructureMemoryRequirementsKHR vkGetAccelerationStructureMemoryRequirementsKHR = nullptr;
-	PFN_vkCmdBuildAccelerationStructureKHR vkCmdBuildAccelerationStructureKHR = nullptr;
-	PFN_vkBuildAccelerationStructureKHR vkBuildAccelerationStructureKHR = nullptr;
+	PFN_vkGetAccelerationStructureBuildSizesKHR vkGetAccelerationStructureBuildSizesKHR = nullptr;
 	PFN_vkGetAccelerationStructureDeviceAddressKHR vkGetAccelerationStructureDeviceAddressKHR = nullptr;
 	PFN_vkCmdTraceRaysKHR vkCmdTraceRaysKHR = nullptr;
 	PFN_vkGetRayTracingShaderGroupHandlesKHR vkGetRayTracingShaderGroupHandlesKHR = nullptr;
 	PFN_vkCreateRayTracingPipelinesKHR vkCreateRayTracingPipelinesKHR = nullptr;
 
-	VkPhysicalDeviceRayTracingPropertiesKHR rayTracingProperties{};
-	VkPhysicalDeviceRayTracingFeaturesKHR rayTracingFeatures{};
+	VkPhysicalDeviceRayTracingPipelinePropertiesKHR rayTracingPipelineProperties{};
+	VkPhysicalDeviceAccelerationStructureFeaturesKHR accelerationStructureFeatures{};
 
+	// Enabled features and properties
 	VkPhysicalDeviceBufferDeviceAddressFeatures enabledBufferDeviceAddresFeatures{};
-	VkPhysicalDeviceRayTracingFeaturesKHR enabledRayTracingFeatures{};
+	VkPhysicalDeviceRayTracingPipelineFeaturesKHR enabledRayTracingPipelineFeatures{};
+	VkPhysicalDeviceAccelerationStructureFeaturesKHR enabledAccelerationStructureFeatures{};
 
-	AccelerationStructure bottomLevelAS;
+	AccelerationStructure trianglesBlas;
+	AccelerationStructure spheresBlas;
 	AccelerationStructure topLevelAS;
 
 	std::vector<VkRayTracingShaderGroupCreateInfoKHR> shaderGroups{};

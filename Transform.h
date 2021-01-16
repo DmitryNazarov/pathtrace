@@ -2,9 +2,7 @@
 #define TRANSFORM_H
 
 #include <type_traits>
-#define _USE_MATH_DEFINES
 #include <iomanip>
-#include <math.h>
 #include <sstream>
 #include <vector>
 

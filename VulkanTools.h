@@ -11,7 +11,7 @@
 #include "vulkan/vulkan.h"
 #include "VulkanInitializers.hpp"
 
-#include <math.h>
+//#include <math.h>
 #include <stdlib.h>
 #include <string>
 #include <cstring>
@@ -23,9 +23,9 @@
 #include <stdexcept>
 #include <fstream>
 #if defined(_WIN32)
-#include <windows.h>
-#include <fcntl.h>
-#include <io.h>
+//#include <windows.h>
+//#include <fcntl.h>
+//#include <io.h>
 #elif defined(__ANDROID__)
 #include "VulkanAndroid.h"
 #include <android/asset_manager.h>

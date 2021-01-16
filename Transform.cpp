@@ -1,4 +1,8 @@
+#define _USE_MATH_DEFINES
+#include <math.h>
+
 #include "Transform.h"
+
 
 namespace Transform {
 mat4 rotate(const mat4 &m, float radians, const vec3 &axis) {

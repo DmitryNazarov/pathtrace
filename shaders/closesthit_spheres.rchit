@@ -4,7 +4,7 @@
 #extension GL_GOOGLE_include_directive : enable
 #include "raycommon.glsl"
 
-layout(location = 0) rayPayloadInEXT vec3 hitValue;
+layout(location = 0) rayPayloadInEXT RayPayload rayPayload;
 layout(location = 1) rayPayloadEXT bool isShadowed;
 hitAttributeEXT vec3 attribs;
 layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
@@ -105,5 +105,9 @@ void main()
 	Material mat = sphereMaterials.m[gl_PrimitiveID];
 
 	vec4 finalColor = computeShading(intersectionPoint, gl_WorldRayOriginEXT, normal, mat);
-	hitValue = finalColor.rgb;
+
+	rayPayload.color = finalColor.rgb;
+	rayPayload.distance = gl_HitTEXT;
+	rayPayload.normal = normal;
+	rayPayload.specular = mat.specular.rgb;
 }

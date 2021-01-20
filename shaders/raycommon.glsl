@@ -39,6 +39,14 @@ struct Material
 	float shininess;
 };
 
+struct RayPayload
+{
+	vec3 color;
+	float distance;
+	vec3 normal;
+	vec3 specular;
+};
+
 vec4 computeLight(vec3 direction, vec4 lightcolor, vec3 normal,
 	vec3 halfvec, vec4 diffuse, vec4 specular, float shininess)
 {
@@ -64,4 +72,13 @@ vec4 computeLightSpecular(vec3 direction, vec3 normal, vec3 halfvec,
 {
 	float nDotH = dot(normal, halfvec);
 	return specular * pow(max(nDotH, 0.0f), shininess);
+}
+
+vec3 compensateFloatRoundingError(vec3 origin, vec3 direction, vec3 normal) {
+	if (dot(direction, normal) < 0.0f)
+		origin -= 1e-4f * normal;
+	else
+		origin += 1e-4f * normal;
+
+	return origin;
 }

@@ -1,9 +1,14 @@
 #version 460
 #extension GL_EXT_ray_tracing : require
+#extension GL_GOOGLE_include_directive : enable
+#include "raycommon.glsl"
 
-layout(location = 0) rayPayloadInEXT vec3 hitValue;
+layout(location = 0) rayPayloadInEXT RayPayload rayPayload;
 
 void main()
 {
-	hitValue = vec3(0.0);
+	rayPayload.color = vec3(0.0f);
+	rayPayload.distance = -1.0f;
+	rayPayload.normal = vec3(0.0f);
+	rayPayload.specular = vec3(0.0f);
 }

@@ -32,13 +32,18 @@ struct Vertex
   Vertex(const glm::vec3& pos, const glm::vec3& normal) : pos(pos), normal(normal)
   {}
   glm::vec3 pos;
-  glm::vec3 normal;
+  alignas(16) glm::vec3 normal;
+
+  bool operator==(const Vertex& other_v)
+  {
+    return pos == other_v.pos && normal == other_v.normal;
+  }
 };
 
 struct Sphere {
   vec3 pos;
   float radius;
-  alignas(16) mat4 transform{1.0f}, invertedTransform{1.0f};
+  mat4 transform{1.0f}, invertedTransform{1.0f};
 };
 
 struct Aabb
@@ -49,7 +54,7 @@ struct Aabb
 
 struct DirectionLight {
   DirectionLight(const vec3& dir, const vec4& color) : dir(dir), color(color) {}
-  alignas(16) vec3 dir;
+  vec3 dir;
   alignas(16) vec4 color;
 };
 
@@ -58,9 +63,9 @@ struct PointLight {
     pos(pos), color(color), attenuation(attenuation)
   {}
 
-  alignas(16) vec3 pos;
+  vec3 pos;
   alignas(16) vec4 color;
-  alignas(16) vec3 attenuation{ 1.0f, 0.0f, 0.0f };
+  vec3 attenuation{ 1.0f, 0.0f, 0.0f };
 };
 
 #endif // PRIMITIVES_H

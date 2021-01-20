@@ -16,14 +16,12 @@ layout(location = 0) rayPayloadEXT vec3 hitValue;
 void main()
 {
 	const vec2 pixelCenter = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
-	const vec2 inUV = pixelCenter/vec2(gl_LaunchSizeEXT.xy);
-	vec2 d = inUV * 2.0 - 1.0;
+	const vec2 inUV = pixelCenter / vec2(gl_LaunchSizeEXT.xy);
+	vec2 d = vec2(inUV.x * 2.0 - 1.0, 1.0 - 2.0 * inUV.y);
 
-	d.y = 1.0 - 2.0 * inUV.y; //???
-
-	vec4 origin = ubo.viewInverse * vec4(0,0,0,1);
+	vec4 origin = ubo.viewInverse * vec4(0, 0, 0, 1);
 	vec4 target = ubo.projInverse * vec4(d.x, d.y, 1, 1) ;
-	vec4 direction = ubo.viewInverse*vec4(normalize(target.xyz / target.w), 0) ;
+	vec4 direction = ubo.viewInverse * vec4(normalize(target.xyz / target.w), 0) ;
 
 	uint rayFlags = gl_RayFlagsOpaqueEXT;
 	uint cullMask = 0xff;

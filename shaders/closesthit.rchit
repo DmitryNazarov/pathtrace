@@ -86,62 +86,6 @@ vec4 computeShading(vec3 point, vec3 eye, vec3 normal, Material m)
 	return finalcolor;
 }
 
-vec4 computeShading2(vec3 point, vec3 eye, vec3 normal, Material m)
-{
-	vec4 finalcolor = m.ambient + m.emission;
-	vec3 direction, halfvec;
-	vec3 eyedirn = normalize(eye - point);
-
-	for (int i = 0; i < ubo.directLightsNum; ++i)
-	{
-		direction = normalize(directLights.l[i].dir);
-		isShadowed = true;
-		traceRay(point, direction, 10000.0f);
-		if (!isShadowed)
-		{
-			halfvec = normalize(direction + eyedirn);
-			finalcolor += computeLight(direction, directLights.l[i].color, normal, halfvec, m.diffuse,
-				m.specular, m.shininess);
-		}
-	}
-
-	for (int i = 0; i < ubo.pointLightsNum; ++i)
-	{
-		vec3 lightdir = pointLights.l[i].pos - point;
-		direction = normalize(lightdir);
-		float dist = length(lightdir);
-
-		isShadowed = true;
-		if (dot(normal, direction) > 0)
-		{
-			traceRay(point, direction, dist);
-		}
-
-		vec4 scolor = vec4(0);
-		float attenuation = 1.0f;
-		if (!isShadowed)
-		{
-			halfvec = normalize(direction + eyedirn);
-			//vec4 color = computeLight(direction, pointLights.l[i].color, normal, halfvec, m.diffuse,
-			//	m.specular, m.shininess);
-
-			scolor = computeLightSpecular(direction, normal, halfvec,
-				m.specular, m.shininess);
-
-			attenuation = pointLights.l[i].attenuation.x + pointLights.l[i].attenuation.y * dist +
-				pointLights.l[i].attenuation.z * dist * dist;
-		}
-
-		vec4 dcolor = computeLightDiffuse(direction, normal,
-			m.diffuse);
-		finalcolor += pointLights.l[i].color / attenuation * (dcolor + scolor);
-	}
-
-	if (finalcolor.a > 1.0f)
-		finalcolor.a = 1.0f;
-	return finalcolor;
-}
-
 void main()
 {
 	Vertex v0 = vertices.v[indices.i[3 * gl_PrimitiveID]];
@@ -156,7 +100,7 @@ void main()
 	vec4 finalColor = computeShading(intersectionPoint, gl_WorldRayOriginEXT, normal, mat);
 
 	rayPayload.color = finalColor.rgb;
-	rayPayload.distance = gl_HitTEXT;
+	rayPayload.intersectionPoint = intersectionPoint;
 	rayPayload.normal = normal;
 	rayPayload.specular = mat.specular.rgb;
 }

@@ -20,7 +20,7 @@ public:
 	glm::vec2 rotation = glm::vec2();
 
 	float rotationSpeed = 1.0f;
-	float movementSpeed = 1.0f;
+	float movementSpeed = 5.0f;
 
 	bool updated = false;
 	bool moved = false;

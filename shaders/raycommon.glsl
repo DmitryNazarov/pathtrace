@@ -42,7 +42,7 @@ struct Material
 struct RayPayload
 {
 	vec3 color;
-	float distance;
+	vec3 intersectionPoint;
 	vec3 normal;
 	vec3 specular;
 };
@@ -57,21 +57,6 @@ vec4 computeLight(vec3 direction, vec4 lightcolor, vec3 normal,
 	vec4 phong = specular * pow(max(nDotH, 0.0f), shininess);
 
 	return lightcolor * (lambert + phong);
-}
-
-//Lambertian
-vec4 computeLightDiffuse(vec3 direction, vec3 normal, vec4 diffuse)
-{
-	float nDotL = dot(normal, direction);
-	return diffuse * max(nDotL, 0.0f);
-}
-
-//Phong
-vec4 computeLightSpecular(vec3 direction, vec3 normal, vec3 halfvec,
-	vec4 specular, float shininess)
-{
-	float nDotH = dot(normal, halfvec);
-	return specular * pow(max(nDotH, 0.0f), shininess);
 }
 
 vec3 compensateFloatRoundingError(vec3 origin, vec3 direction, vec3 normal) {

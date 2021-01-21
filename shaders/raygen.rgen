@@ -34,17 +34,23 @@ void main()
 	for (int i = 0; i < MAX_RECURSION; ++i)
 	{
 		traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, origin.xyz, tmin, direction.xyz, tmax, 0);
-		color += rayPayload.specular * rayPayload.color;
-		if (rayPayload.specular != vec3(0.0f))
+
+		if (i == 0)
 		{
-			const vec4 hitPos = origin + direction * rayPayload.distance;
-			direction.xyz = normalize(reflect(direction.xyz, rayPayload.normal.xyz));
-			origin.xyz = compensateFloatRoundingError(origin.xyz, direction.xyz, rayPayload.normal.xyz);
+			color += rayPayload.color;
 		}
 		else
 		{
+			color += rayPayload.specular * rayPayload.color;
+		}
+
+		if (rayPayload.specular == vec3(0.0f))
+		{
 			break;
 		}
+
+		direction.xyz = normalize(reflect(direction.xyz, rayPayload.normal.xyz));
+		origin.xyz = compensateFloatRoundingError(rayPayload.intersectionPoint, direction.xyz, rayPayload.normal.xyz);
 	}
 
 	imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(color, 0.0));

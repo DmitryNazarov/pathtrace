@@ -69,24 +69,15 @@ vec4 computeShading(vec3 point, vec3 eye, vec3 normal, Material m)
 			traceRay(point, direction, dist);
 		}
 
-		vec4 scolor = vec4(0);
-		float attenuation = 1.0f;
 		if (!isShadowed)
 		{
 			halfvec = normalize(direction + eyedirn);
-			//vec4 color = computeLight(direction, pointLights.l[i].color, normal, halfvec, m.diffuse,
-			//	m.specular, m.shininess);
-
-			scolor = computeLightSpecular(direction, normal, halfvec,
+			vec4 color = computeLight(direction, pointLights.l[i].color, normal, halfvec, m.diffuse,
 				m.specular, m.shininess);
-
-			attenuation = pointLights.l[i].attenuation.x + pointLights.l[i].attenuation.y * dist +
+			float a = pointLights.l[i].attenuation.x + pointLights.l[i].attenuation.y * dist +
 				pointLights.l[i].attenuation.z * dist * dist;
+			finalcolor += color / a;
 		}
-
-		vec4 dcolor = computeLightDiffuse(direction, normal,
-			m.diffuse);
-		finalcolor += pointLights.l[i].color / attenuation * (dcolor + scolor);
 	}
 
 	if (finalcolor.a > 1.0f)
@@ -107,7 +98,7 @@ void main()
 	vec4 finalColor = computeShading(intersectionPoint, gl_WorldRayOriginEXT, normal, mat);
 
 	rayPayload.color = finalColor.rgb;
-	rayPayload.distance = gl_HitTEXT;
+	rayPayload.intersectionPoint = intersectionPoint;
 	rayPayload.normal = normal;
 	rayPayload.specular = mat.specular.rgb;
 }

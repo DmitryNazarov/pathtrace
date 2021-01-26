@@ -8,7 +8,7 @@ layout(location = 0) rayPayloadInEXT RayPayload rayPayload;
 void main()
 {
 	rayPayload.color = vec3(0.0f);
-	rayPayload.distance = -1.0f;
+	rayPayload.intersectionPoint = vec3(-1.0f);
 	rayPayload.normal = vec3(0.0f);
 	rayPayload.specular = vec3(0.0f);
 }

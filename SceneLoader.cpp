@@ -1,24 +1,64 @@
 #include <iostream>
 #include <unordered_set>
+#include <array>
 #include <SceneLoader.h>
 
 
-uint32_t addToVertices(std::vector<Vertex>& vertices, const vec3& pos, const vec3& normal)
+uint32_t addToVertices(std::vector<Vertex>& vertices, const Vertex& v)
 {
-  auto it = std::find_if(vertices.begin(), vertices.end(), [&pos](const Vertex& v) {
-    return v.pos == pos;
-  });
+  auto it = std::find(vertices.begin(), vertices.end(), v);
   if (it != vertices.end())
   {
     return std::distance(vertices.begin(), it);
   }
-  vertices.emplace_back(pos, normal);
+  vertices.push_back(v);
   return vertices.size() - 1;
 }
 
-Scene loadScene(const std::string& filename) {
-  Scene scene;
+Aabb calcAabb(const Sphere& s)
+{
+  std::array<vec3, 8> AabbPoints {
+    s.pos - vec3(s.radius),
+    vec3(s.pos.x - s.radius, s.pos.y + s.radius, s.pos.z - s.radius),
+    vec3(s.pos.x + s.radius, s.pos.y + s.radius, s.pos.z - s.radius),
+    vec3(s.pos.x + s.radius, s.pos.y - s.radius, s.pos.z - s.radius),
+    vec3(s.pos.x - s.radius, s.pos.y - s.radius, s.pos.z + s.radius),
+    vec3(s.pos.x - s.radius, s.pos.y + s.radius, s.pos.z + s.radius),
+    vec3(s.pos.x + s.radius, s.pos.y - s.radius, s.pos.z + s.radius),
+    s.pos + vec3(s.radius)
+  };
 
+  for (auto &i : AabbPoints)
+  {
+    i = s.transform * vec4(i, 1.0f);
+  }
+
+  vec3 min(AabbPoints[0]), max(AabbPoints[0]);
+  for (size_t i = 1; i < AabbPoints.size(); ++i)
+  {
+    float& x = AabbPoints[i].x;
+    float& y = AabbPoints[i].y;
+    float& z = AabbPoints[i].z;
+
+    if (x < min.x)
+      min.x = x;
+    else if (x > max.x)
+      max.x = x;
+    if (y < min.y)
+      min.y = y;
+    else if (y > max.y)
+      max.y = y;
+    if (z < min.z)
+      min.z = z;
+    else if (z > max.z)
+      max.z = z;
+  }
+
+  return {min, max};
+}
+
+void Scene::loadScene(const std::string& filename)
+{
   std::vector<vec3> sceneVertices;
   std::vector<std::pair<vec3, vec3>> vertexNormals;
 
@@ -32,12 +72,11 @@ Scene loadScene(const std::string& filename) {
   std::string str, cmd;
   std::ifstream in(filename);
   if (!in.is_open())
-    return scene;
+    return;
 
   std::stack<mat4> transfstack;
   transfstack.push(mat4(1.0)); // identity
 
-  //minus all y and z coords because of different coordinate frames in scene(ogl) and in raytracer(vulcan)
   while (getline(in, str)) {
     if ((str.find_first_not_of(" \t\r\n") == std::string::npos) ||
       (str[0] == '#'))
@@ -49,65 +88,61 @@ Scene loadScene(const std::string& filename) {
     if (cmd == "size") {
       int values[2];
       if (readvals(ss, 2, values)) {
-        scene.width = values[0];
-        scene.height = values[1];
-        scene.aspect = static_cast<float>(scene.width) /
-          static_cast<float>(scene.height);
+        width = values[0];
+        height = values[1];
+        aspect = static_cast<float>(width) / static_cast<float>(height);
       }
     }
     else if (cmd == "camera") {
       float values[10];
       if (readvals(ss, 10, values)) {
-        scene.eye_init = vec3(values[0], -values[1], -values[2]);
-        scene.center = vec3(values[3], -values[4], -values[5]);
-        scene.up_init = vec3(values[6], -values[7], -values[8]);
-        scene.fovy = values[9];
+        eyeInit = vec3(values[0], values[1], values[2]);
+        center = vec3(values[3], values[4], values[5]);
+        upInit = vec3(values[6], values[7], values[8]);
+        fovy = values[9];
       }
     }
     else if (cmd == "maxdepth") {
       int value;
       if (readvals(ss, 1, &value)) {
-        scene.depth = value;
+        depth = value;
       }
     }
     else if (cmd == "output") {
       std::string value;
       if (readvals(ss, 1, &value)) {
-        scene.filename = value;
+        screenshotName = value;
       }
     }
     else if (cmd == "sphere") {
       float values[4];
       if (readvals(ss, 4, values)) {
         Sphere s;
-        s.pos = vec3(values[0], -values[1], -values[2]);
+        s.pos = vec3(values[0], values[1], values[2]);
         s.radius = values[3];
         s.transform = transfstack.top();
         s.invertedTransform = inverse(transfstack.top());
-        scene.spheres.push_back(s);
-        Aabb aabb;
-        aabb.minimum = s.pos - vec3(s.radius);
-        aabb.maximum = s.pos + vec3(s.radius);
-        scene.aabbs.push_back(aabb);
-        scene.sphereMaterials.emplace_back(ambient, diffuse, specular, emission, shininess);
+        spheres.push_back(s);
+        aabbs.push_back(calcAabb(s));
+        sphereMaterials.emplace_back(ambient, diffuse, specular, emission, shininess);
       }
     }
     else if (cmd == "translate") {
       float values[3];
       if (readvals(ss, 3, values)) {
-        transfstack.top() = translate(transfstack.top(), vec3(values[0], -values[1], -values[2]));
+        transfstack.top() = translate(transfstack.top(), vec3(values[0], values[1], values[2]));
       }
     }
     else if (cmd == "scale") {
       float values[3];
       if (readvals(ss, 3, values)) {
-        transfstack.top() = scale(transfstack.top(), vec3(values[0], -values[1], -values[2]));
+        transfstack.top() = scale(transfstack.top(), vec3(values[0], values[1], values[2]));
       }
     }
     else if (cmd == "rotate") {
       float values[4];
       if (readvals(ss, 4, values)) {
-        vec3 axis = normalize(vec3(values[0], -values[1], -values[2]));
+        vec3 axis = normalize(vec3(values[0], values[1], values[2]));
         transfstack.top() = rotate(transfstack.top(), radians(values[3]), axis);
       }
     }
@@ -125,14 +160,14 @@ Scene loadScene(const std::string& filename) {
     else if (cmd == "vertex") {
       float values[3];
       if (readvals(ss, 3, values)) {
-        sceneVertices.emplace_back(values[0], -values[1], -values[2]);
+        sceneVertices.emplace_back(values[0], values[1], values[2]);
       }
     }
     else if (cmd == "vertexnormal") {
       float values[6];
       if (readvals(ss, 6, values)) {
-        auto vertex = vec3(values[0], -values[1], -values[2]);
-        auto vertexNormal = vec3(values[3], -values[4], -values[5]);
+        auto vertex = vec3(values[0], values[1], values[2]);
+        auto vertexNormal = vec3(values[3], values[4], values[5]);
         vertexNormals.emplace_back(vertex, vertexNormal);
       }
     }
@@ -143,29 +178,29 @@ Scene loadScene(const std::string& filename) {
         vec3 pos1 = transfstack.top() * vec4(sceneVertices[values[1]], 1.0f);
         vec3 pos2 = transfstack.top() * vec4(sceneVertices[values[2]], 1.0f);
         vec3 normal = normalize(cross(pos1 - pos0, pos2 - pos0));
-        uint32_t index0 = addToVertices(scene.vertices, pos0, normal);
-        uint32_t index1 = addToVertices(scene.vertices, pos1, normal);
-        uint32_t index2 = addToVertices(scene.vertices, pos2, normal);
-        scene.indices.push_back(index0);
-        scene.indices.push_back(index1);
-        scene.indices.push_back(index2);
-        scene.triangleMaterials.emplace_back(ambient, diffuse, specular, emission, shininess);
+        uint32_t index0 = addToVertices(vertices, Vertex(pos0, normal));
+        uint32_t index1 = addToVertices(vertices, Vertex(pos1, normal));
+        uint32_t index2 = addToVertices(vertices, Vertex(pos2, normal));
+        indices.push_back(index0);
+        indices.push_back(index1);
+        indices.push_back(index2);
+        triangleMaterials.emplace_back(ambient, diffuse, specular, emission, shininess);
       }
     }
     else if (cmd == "directional") {
       float values[6];
       if (readvals(ss, 6, values)) {
-        auto dir = vec3(values[0], -values[1], -values[2]);
+        auto dir = vec3(values[0], values[1], values[2]);
         auto c = vec4(values[3], values[4], values[5], 1.0f);
-        scene.directLights.emplace_back(dir, c);
+        directLights.emplace_back(dir, c);
       }
     }
     else if (cmd == "point") {
       float values[6];
       if (readvals(ss, 6, values)) {
-        auto pos = vec3(values[0], -values[1], -values[2]);
+        auto pos = vec3(values[0], values[1], values[2]);
         auto c = vec4(values[3], values[4], values[5], 1.0f);
-        scene.pointLights.emplace_back(pos, c, attenuation);
+        pointLights.emplace_back(pos, c, attenuation);
       }
     }
     else if (cmd == "ambient") {
@@ -213,11 +248,9 @@ Scene loadScene(const std::string& filename) {
       std::cerr << "Unknown Command: " << cmd << " Skipping \n";
     }
   }
-
-  return scene;
 }
 
-void Scene::loadVulkanBuffersForScene(vks::VulkanDevice* device, VkQueue transferQueue, VkMemoryPropertyFlags memoryPropertyFlags)
+void Scene::loadVulkanBuffersForScene(const VulkanDebug& vkDebug, vks::VulkanDevice* device, VkQueue transferQueue, VkMemoryPropertyFlags memoryPropertyFlags)
 {
   verticesBuf.count = vertices.size();
   indicesBuf.count = indices.size();
@@ -318,48 +351,63 @@ void Scene::loadVulkanBuffersForScene(vks::VulkanDevice* device, VkQueue transfe
     vertexSize,
     &verticesBuf.buffer,
     &verticesBuf.memory));
+  vkDebug.setBufferName(verticesBuf.buffer, "Vertices");
+
   VK_CHECK_RESULT(device->createBuffer(
     VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | memoryPropertyFlags,
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     indexSize,
     &indicesBuf.buffer,
     &indicesBuf.memory));
+  vkDebug.setBufferName(indicesBuf.buffer, "Indices");
+
   VK_CHECK_RESULT(device->createBuffer(
     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | memoryPropertyFlags,
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     spheresSize,
     &spheresBuf.buffer,
     &spheresBuf.memory));
+  vkDebug.setBufferName(spheresBuf.buffer, "Spheres");
+
   VK_CHECK_RESULT(device->createBuffer(
     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | memoryPropertyFlags,
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     aabbsSize,
     &aabbsBuf.buffer,
     &aabbsBuf.memory));
+  vkDebug.setBufferName(aabbsBuf.buffer, "Aabbs");
+
   VK_CHECK_RESULT(device->createBuffer(
     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | memoryPropertyFlags,
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     pointLightsSize,
     &pointLightsBuf.buffer,
     &pointLightsBuf.memory));
+  vkDebug.setBufferName(pointLightsBuf.buffer, "PointLights");
+
   VK_CHECK_RESULT(device->createBuffer(
     VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | memoryPropertyFlags,
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     directLightsSize,
     &directLightsBuf.buffer,
     &directLightsBuf.memory));
+  vkDebug.setBufferName(directLightsBuf.buffer, "DirectLights");
+
   VK_CHECK_RESULT(device->createBuffer(
     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | memoryPropertyFlags,
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     triangleMaterialsSize,
     &triangleMaterialsBuf.buffer,
     &triangleMaterialsBuf.memory));
+  vkDebug.setBufferName(triangleMaterialsBuf.buffer, "TriangleMaterials");
+
   VK_CHECK_RESULT(device->createBuffer(
     VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | memoryPropertyFlags,
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     sphereMaterialsSize,
     &sphereMaterialsBuf.buffer,
     &sphereMaterialsBuf.memory));
+  vkDebug.setBufferName(sphereMaterialsBuf.buffer, "SphereMaterials");
 
   // Copy from staging buffers
   VkCommandBuffer copyCmd = device->createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);

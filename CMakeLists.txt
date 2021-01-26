@@ -33,7 +33,9 @@ target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${GLFW_DIR}/include Vul
 target_link_libraries(${PROJECT_NAME} PUBLIC glfw ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARIES} Vulkan::Vulkan)
 
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
-
+if(${DEBUG})
+    target_compile_definitions(${PROJECT_NAME} PUBLIC -DVALIDATION=\"true\")
+endif()
 
 # ------------------------- Compile Shaders -------------------------
 message(STATUS "Start Shaders...")

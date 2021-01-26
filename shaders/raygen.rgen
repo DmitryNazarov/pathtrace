@@ -26,29 +26,34 @@ void main()
 	vec4 direction = normalize(ubo.viewInverse * vec4(normalize(target.xyz / target.w), 0));
 
 	uint rayFlags = gl_RayFlagsOpaqueEXT;
-	uint cullMask = 0xff;
 	float tmin = 0.001;
 	float tmax = 10000.0;
 
 	vec3 color = vec3(0.0f);
+	vec3 specular = vec3(1.0f);
 	for (int i = 0; i < MAX_RECURSION; ++i)
 	{
-		traceRayEXT(topLevelAS, rayFlags, cullMask, 0, 0, 0, origin.xyz, tmin, direction.xyz, tmax, 0);
+		traceRayEXT(topLevelAS,     // acceleration structure
+					rayFlags,       // rayFlags
+					0xFF,           // cullMask
+					0,              // sbtRecordOffset
+					0,              // sbtRecordStride
+					0,              // missIndex
+					origin.xyz,     // ray origin
+					tmin,           // ray min range
+					direction.xyz,  // ray direction
+					tmax,           // ray max range
+					0               // payload (location = 0)
+		);
 
-		if (i == 0)
-		{
-			color += rayPayload.color;
-		}
-		else
-		{
-			color += rayPayload.specular * rayPayload.color;
-		}
+		color += specular * rayPayload.color;
 
 		if (rayPayload.specular == vec3(0.0f))
 		{
 			break;
 		}
 
+		specular = rayPayload.specular;
 		direction.xyz = normalize(reflect(direction.xyz, rayPayload.normal.xyz));
 		origin.xyz = compensateFloatRoundingError(rayPayload.intersectionPoint, direction.xyz, rayPayload.normal.xyz);
 	}

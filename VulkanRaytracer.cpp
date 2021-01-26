@@ -61,7 +61,6 @@ VkResult VulkanRaytracer::createInstance()
 	if (settings.validation)
 	{
 		// The VK_LAYER_KHRONOS_validation contains all current validation functionality.
-		// Note that on Android this layer requires at least NDK r20
 		const char* validationLayerName = "VK_LAYER_KHRONOS_validation";
 		// Check if this layer is available at instance level
 		uint32_t instanceLayerCount;
@@ -83,7 +82,7 @@ VkResult VulkanRaytracer::createInstance()
 			createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 			createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
 			createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-			createInfo.pfnUserCallback = vks::debug::debugCallback;
+			createInfo.pfnUserCallback = &VulkanDebug::debugCallback;
 			instanceCreateInfo.pNext = &createInfo;
 		} else {
 			std::cerr << "Validation layer VK_LAYER_KHRONOS_validation not present, validation is disabled";
@@ -129,9 +128,6 @@ void VulkanRaytracer::createPipelineCache()
 
 void VulkanRaytracer::prepare()
 {
-	if (vulkanDevice->enableDebugMarkers) {
-		vks::debugmarker::setup(device);
-	}
 	initSwapchain();
 	createCommandPool();
 	setupSwapChain();
@@ -148,6 +144,10 @@ void VulkanRaytracer::prepare()
 	deviceProps2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
 	deviceProps2.pNext = &rayTracingPipelineProperties;
 	vkGetPhysicalDeviceProperties2(physicalDevice, &deviceProps2);
+
+	if (rayTracingPipelineProperties.maxRayRecursionDepth < scene.depth) {
+		throw std::runtime_error("Device fails to support maxRecursionDepth = " + std::to_string(scene.depth));
+	}
 
 	// Query the ray tracing properties of the current implementation, we will need them later on
 	accelerationStructureFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
@@ -169,7 +169,7 @@ void VulkanRaytracer::prepare()
 	vkCreateRayTracingPipelinesKHR = reinterpret_cast<PFN_vkCreateRayTracingPipelinesKHR>(vkGetDeviceProcAddr(device, "vkCreateRayTracingPipelinesKHR"));
 
 	// Create the acceleration structures used to render the ray traced scene
-	scene.loadVulkanBuffersForScene(vulkanDevice, queue);
+	scene.loadVulkanBuffersForScene(vkDebug, vulkanDevice, queue);
 	createBottomLevelAccelerationStructureTriangles();
 	createBottomLevelAccelerationStructureSpheres();
 	createTopLevelAccelerationStructure();
@@ -236,15 +236,6 @@ void VulkanRaytracer::nextFrame()
 
 void VulkanRaytracer::renderLoop()
 {
-	if (benchmark.active) {
-		benchmark.run([=] { render(); }, vulkanDevice->properties);
-		vkDeviceWaitIdle(device);
-		if (benchmark.filename != "") {
-			benchmark.saveResults();
-		}
-		return;
-	}
-
 	destWidth = width;
 	destHeight = height;
 	lastTimestamp = std::chrono::high_resolution_clock::now();
@@ -293,11 +284,11 @@ void VulkanRaytracer::submitFrame()
 
 VulkanRaytracer::VulkanRaytracer(const std::vector<std::string>& args)
 {
-#ifdef DEBUG
+#ifdef VALIDATION
 	settings.validation = true;
 #else
 	settings.validation = false;
-#endif // DEBUG
+#endif // VALIDATION
 
 	// Parse command line arguments
 	for (size_t i = 0; i < args.size(); ++i)
@@ -306,55 +297,29 @@ VulkanRaytracer::VulkanRaytracer(const std::vector<std::string>& args)
 		{
 			settings.vsync = true;
 		}
-		// Benchmark
-		else if (args[i] == "-b" || args[i] == "--benchmark") {
-			benchmark.active = true;
-		}
-		// Warmup time (in seconds)
-		else if (args[i] == "-bw" || args[i] == "--benchwarmup")
-		{
-			if (args.size() > i + 1)
-			{
-				benchmark.warmup = std::atoi(args[i + 1].c_str());
-			}
-		}
-		// Benchmark runtime (in seconds)
-		else if (args[i] == "-br" || args[i] == "--benchruntime")
-		{
-			if (args.size() > i + 1)
-			{
-				benchmark.duration = std::atoi(args[i + 1].c_str());
-			}
-		}
-		// Bench result save filename (overrides default)
-		else if (args[i] == "-bf" || args[i] == "--benchfilename")
-		{
-			if (args.size() > i + 1)
-			{
-				benchmark.filename = args[i + 1];
-			}
-		}
-		// Output frame times to benchmark result file
-		else if (args[i] == "-bt" || args[i] == "--benchframetimes")
-		{
-			benchmark.outputFrameTimes = true;
-		}
 		else if (args[i] == "-g" || args[i] == "-gpu")
 		{
 			selectedDevice = std::atoi(args[i + 1].c_str());
 		}
 	}
 
-	//scene = loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene1.test");
 	//scene = loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\test_scene.test");
+	//scene = loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene1.test");
 	//scene = loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene2.test");
-	scene = loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene3.test");
+	//scene = loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene3.test");
+	//scene = loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene4-ambient.test");
+	//scene = loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene4-diffuse.test");
+	//scene = loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene4-emission.test");
+	//scene = loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene4-specular.test");
+	//scene = loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene5.test");
+	scene.loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene6.test");
+	//scene = loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene7.test");
 
 	height = scene.height;
 	width = scene.width;
 
 	camera.setPerspective(scene.fovy, (float)width / (float)height, 0.1f, 512.0f);
-	camera.setLookAt(scene.eye_init, scene.center, scene.up_init);
+	camera.setLookAt(scene.eyeInit, scene.center, scene.upInit);
 
 	// Enable instance and device extensions required to use VK_KHR_ray_tracing
 	enabledInstanceExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
@@ -415,10 +380,7 @@ VulkanRaytracer::~VulkanRaytracer()
 
 	delete vulkanDevice;
 
-	if (settings.validation)
-	{
-		vks::debug::freeDebugCallback(instance);
-	}
+	vkDebug.destroy(instance);
 
 	vkDestroyInstance(instance, nullptr);
 
@@ -430,17 +392,15 @@ bool VulkanRaytracer::initAPIs()
 {
 	glfwInit();
 
-	// Vulkan instance
 	 VkResult err = createInstance();
 	if (err) {
 		vks::tools::exitFatal("Could not create Vulkan instance : \n" + vks::tools::errorString(err), err);
 		return false;
 	}
 
-	// If requested, we enable the default validation layers for debugging
 	if (settings.validation)
 	{
-		vks::debug::setupDebugging(instance);
+		vkDebug.setupInstance(instance);
 	}
 
 	// Physical device
@@ -518,6 +478,10 @@ bool VulkanRaytracer::initAPIs()
 	submitInfo.pWaitSemaphores = &semaphores.presentComplete;
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = &semaphores.renderComplete;
+
+	if (settings.validation) {
+		vkDebug.setupDevice(device);
+	}
 
 	return true;
 }
@@ -932,6 +896,7 @@ void VulkanRaytracer::createBottomLevelAccelerationStructureTriangles()
 		&accelerationStructureBuildSizesInfo);
 
 	createAccelerationStructure(trianglesBlas, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, accelerationStructureBuildSizesInfo);
+	vkDebug.setBufferName(trianglesBlas.buffer, "TrianglesBLAS");
 
 	// Create a small scratch buffer used during build of the bottom level acceleration structure
 	ScratchBuffer scratchBuffer = createScratchBuffer(accelerationStructureBuildSizesInfo.buildScratchSize);
@@ -1011,6 +976,7 @@ void VulkanRaytracer::createBottomLevelAccelerationStructureSpheres()
 		&accelerationStructureBuildSizesInfo);
 
 	createAccelerationStructure(spheresBlas, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, accelerationStructureBuildSizesInfo);
+	vkDebug.setBufferName(spheresBlas.buffer, "SpheresBLAS");
 
 	// Create a small scratch buffer used during build of the bottom level acceleration structure
 	ScratchBuffer scratchBuffer = createScratchBuffer(accelerationStructureBuildSizesInfo.buildScratchSize);
@@ -1121,6 +1087,7 @@ void VulkanRaytracer::createTopLevelAccelerationStructure()
 		&accelerationStructureBuildSizesInfo);
 
 	createAccelerationStructure(topLevelAS, VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR, accelerationStructureBuildSizesInfo);
+	vkDebug.setBufferName(topLevelAS.buffer, "TLAS");
 
 	// Create a small scratch buffer used during build of the top level acceleration structure
 	ScratchBuffer scratchBuffer = createScratchBuffer(accelerationStructureBuildSizesInfo.buildScratchSize);
@@ -1322,6 +1289,18 @@ void VulkanRaytracer::createRayTracingPipeline()
 	// Ray generation group
 	{
 		shaderStages.push_back(loadShader("shaders/raygen.rgen.spv", VK_SHADER_STAGE_RAYGEN_BIT_KHR));
+
+		VkSpecializationMapEntry specializationMapEntry{};
+		specializationMapEntry.constantID = 0;
+		specializationMapEntry.offset = 0;
+		specializationMapEntry.size = sizeof(uint32_t);
+		VkSpecializationInfo specializationInfo{};
+		specializationInfo.mapEntryCount = 1;
+		specializationInfo.pMapEntries = &specializationMapEntry;
+		specializationInfo.dataSize = sizeof(scene.depth);
+		specializationInfo.pData = &scene.depth;
+		shaderStages.back().pSpecializationInfo = &specializationInfo;
+
 		VkRayTracingShaderGroupCreateInfoKHR shaderGroup{};
 		shaderGroup.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
 		shaderGroup.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
@@ -1383,7 +1362,7 @@ void VulkanRaytracer::createRayTracingPipeline()
 	rayTracingPipelineCI.pStages = shaderStages.data();
 	rayTracingPipelineCI.groupCount = static_cast<uint32_t>(shaderGroups.size());
 	rayTracingPipelineCI.pGroups = shaderGroups.data();
-	rayTracingPipelineCI.maxPipelineRayRecursionDepth = maxRecursionDepth;
+	rayTracingPipelineCI.maxPipelineRayRecursionDepth = scene.depth;
 	rayTracingPipelineCI.layout = pipelineLayout;
 	VK_CHECK_RESULT(vkCreateRayTracingPipelinesKHR(device, VK_NULL_HANDLE, VK_NULL_HANDLE, 1, &rayTracingPipelineCI, nullptr, &pipeline));
 }

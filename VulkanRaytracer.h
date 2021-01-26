@@ -28,7 +28,6 @@
 #include "VulkanDevice.h"
 #include "VulkanInitializers.hpp"
 #include "camera.hpp"
-#include "benchmark.hpp"
 #include <SceneLoader.h>
 
 
@@ -263,8 +262,6 @@ private:
 	/** @brief Last frame time measured using a high performance timer (if available) */
 	float frameTimer = 1.0f;
 
-	vks::Benchmark benchmark;
-
 	/** @brief Encapsulated physical and logical vulkan device */
 	vks::VulkanDevice* vulkanDevice;
 
@@ -289,8 +286,6 @@ private:
 	glm::vec2 mousePos;
 
 	std::string applicationName = "Vulkan Raytracer";
-
-	const uint32_t maxRecursionDepth = 4;
 
 	struct {
 		VkImage image;
@@ -318,4 +313,6 @@ private:
 		{ "triangleMaterialsBuffer", 8 },
 		{ "sphereMaterialsBuffer", 9 }
 	};
+
+	VulkanDebug vkDebug;
 };

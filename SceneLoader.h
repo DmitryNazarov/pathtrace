@@ -8,6 +8,7 @@
 #include <Primitives.h>
 #include <Transform.h>
 #include <VulkanDevice.h>
+#include <VulkanDebug.h>
 
 
 struct VArray
@@ -17,15 +18,16 @@ struct VArray
   VkDeviceMemory memory;
 };
 
-struct Scene
+class Scene
 {
+public:
   size_t width = 640, height = 480;
   float aspect;
-  int depth = 5;
-  std::string filename = "screenshot.png";
-  vec3 eye_init;
+  uint32_t depth = 5;
+  std::string screenshotName = "screenshot.png";
+  vec3 eyeInit;
   vec3 center;
-  vec3 up_init;
+  vec3 upInit;
   float fovy = 90;
 
   std::vector<DirectionLight> directLights;
@@ -40,7 +42,12 @@ struct Scene
   std::vector<Material> sphereMaterials;
 
   VArray verticesBuf, indicesBuf, spheresBuf, aabbsBuf, pointLightsBuf, directLightsBuf, triangleMaterialsBuf, sphereMaterialsBuf;
-  void loadVulkanBuffersForScene(vks::VulkanDevice* device, VkQueue transferQueue, VkMemoryPropertyFlags memoryPropertyFlags = 0);
+
+  void loadScene(const std::string& filename);
+  void loadVulkanBuffersForScene(const VulkanDebug& vkDebug, vks::VulkanDevice* device, VkQueue transferQueue, VkMemoryPropertyFlags memoryPropertyFlags = 0);
+
+private:
+  VulkanDebug vkDebug;
 };
 
 template <typename T>
@@ -55,5 +62,3 @@ bool readvals(std::stringstream& s, const int numvals, T* values)
   }
   return true;
 }
-
-Scene loadScene(const std::string& filename);

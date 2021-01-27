@@ -44,7 +44,7 @@ public:
   VArray verticesBuf, indicesBuf, spheresBuf, aabbsBuf, pointLightsBuf, directLightsBuf, triangleMaterialsBuf, sphereMaterialsBuf;
 
   void loadScene(const std::string& filename);
-  void loadVulkanBuffersForScene(const VulkanDebug& vkDebug, vks::VulkanDevice* device, VkQueue transferQueue, VkMemoryPropertyFlags memoryPropertyFlags = 0);
+  void loadVulkanBuffersForScene(const VulkanDebug& vkDebug, vks::VulkanDevice* device, VkQueue transferQueue);
 
 private:
   VulkanDebug vkDebug;

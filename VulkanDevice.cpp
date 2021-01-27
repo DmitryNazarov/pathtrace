@@ -32,18 +32,18 @@ namespace vks
 		vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
 		// Queue family properties, used for setting up requested queues upon device creation
 		uint32_t queueFamilyCount;
-		vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
+		vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, VK_NULL_HANDLE);
 		assert(queueFamilyCount > 0);
 		queueFamilyProperties.resize(queueFamilyCount);
 		vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilyProperties.data());
 
 		// Get list of supported extensions
 		uint32_t extCount = 0;
-		vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extCount, nullptr);
+		vkEnumerateDeviceExtensionProperties(physicalDevice, VK_NULL_HANDLE, &extCount, VK_NULL_HANDLE);
 		if (extCount > 0)
 		{
 			std::vector<VkExtensionProperties> extensions(extCount);
-			if (vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extCount, &extensions.front()) == VK_SUCCESS)
+			if (vkEnumerateDeviceExtensionProperties(physicalDevice, VK_NULL_HANDLE, &extCount, &extensions.front()) == VK_SUCCESS)
 			{
 				for (auto ext : extensions)
 				{
@@ -62,11 +62,11 @@ namespace vks
 	{
 		if (commandPool)
 		{
-			vkDestroyCommandPool(logicalDevice, commandPool, nullptr);
+			vkDestroyCommandPool(logicalDevice, commandPool, VK_NULL_HANDLE);
 		}
 		if (logicalDevice)
 		{
-			vkDestroyDevice(logicalDevice, nullptr);
+			vkDestroyDevice(logicalDevice, VK_NULL_HANDLE);
 		}
 	}
 
@@ -260,15 +260,8 @@ namespace vks
 			physicalDeviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 			physicalDeviceFeatures2.features = enabledFeatures;
 			physicalDeviceFeatures2.pNext = pNextChain;
-			deviceCreateInfo.pEnabledFeatures = nullptr;
+			deviceCreateInfo.pEnabledFeatures = VK_NULL_HANDLE;
 			deviceCreateInfo.pNext = &physicalDeviceFeatures2;
-		}
-
-		// Enable the debug marker extension if it is present (likely meaning a debugging tool is present)
-		if (extensionSupported(VK_EXT_DEBUG_MARKER_EXTENSION_NAME))
-		{
-			deviceExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-			enableDebugMarkers = true;
 		}
 
 		if (deviceExtensions.size() > 0)
@@ -286,7 +279,7 @@ namespace vks
 
 		this->enabledFeatures = enabledFeatures;
 
-		VkResult result = vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &logicalDevice);
+		VkResult result = vkCreateDevice(physicalDevice, &deviceCreateInfo, VK_NULL_HANDLE, &logicalDevice);
 		if (result != VK_SUCCESS) 
 		{
 			return result;
@@ -315,7 +308,7 @@ namespace vks
 		// Create the buffer handle
 		VkBufferCreateInfo bufferCreateInfo = vks::initializers::bufferCreateInfo(usageFlags, size);
 		bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		VK_CHECK_RESULT(vkCreateBuffer(logicalDevice, &bufferCreateInfo, nullptr, buffer));
+		VK_CHECK_RESULT(vkCreateBuffer(logicalDevice, &bufferCreateInfo, VK_NULL_HANDLE, buffer));
 
 		// Create the memory backing up the buffer handle
 		VkMemoryRequirements memReqs;
@@ -331,7 +324,7 @@ namespace vks
 			allocFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR;
 			memAlloc.pNext = &allocFlagsInfo;
 		}
-		VK_CHECK_RESULT(vkAllocateMemory(logicalDevice, &memAlloc, nullptr, memory));
+		VK_CHECK_RESULT(vkAllocateMemory(logicalDevice, &memAlloc, VK_NULL_HANDLE, memory));
 			
 		// If a pointer to the buffer data has been passed, map the buffer and copy over the data
 		if (data != nullptr)
@@ -374,7 +367,7 @@ namespace vks
 
 		// Create the buffer handle
 		VkBufferCreateInfo bufferCreateInfo = vks::initializers::bufferCreateInfo(usageFlags, size);
-		VK_CHECK_RESULT(vkCreateBuffer(logicalDevice, &bufferCreateInfo, nullptr, &buffer->buffer));
+		VK_CHECK_RESULT(vkCreateBuffer(logicalDevice, &bufferCreateInfo, VK_NULL_HANDLE, &buffer->buffer));
 
 		// Create the memory backing up the buffer handle
 		VkMemoryRequirements memReqs;
@@ -390,7 +383,7 @@ namespace vks
 			allocFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR;
 			memAlloc.pNext = &allocFlagsInfo;
 		}
-		VK_CHECK_RESULT(vkAllocateMemory(logicalDevice, &memAlloc, nullptr, &buffer->memory));
+		VK_CHECK_RESULT(vkAllocateMemory(logicalDevice, &memAlloc, VK_NULL_HANDLE, &buffer->memory));
 
 		buffer->alignment = memReqs.alignment;
 		buffer->size = size;
@@ -462,7 +455,7 @@ namespace vks
 		cmdPoolInfo.queueFamilyIndex = queueFamilyIndex;
 		cmdPoolInfo.flags = createFlags;
 		VkCommandPool cmdPool;
-		VK_CHECK_RESULT(vkCreateCommandPool(logicalDevice, &cmdPoolInfo, nullptr, &cmdPool));
+		VK_CHECK_RESULT(vkCreateCommandPool(logicalDevice, &cmdPoolInfo, VK_NULL_HANDLE, &cmdPool));
 		return cmdPool;
 	}
 
@@ -520,12 +513,12 @@ namespace vks
 		// Create fence to ensure that the command buffer has finished executing
 		VkFenceCreateInfo fenceInfo = vks::initializers::fenceCreateInfo(VK_FLAGS_NONE);
 		VkFence fence;
-		VK_CHECK_RESULT(vkCreateFence(logicalDevice, &fenceInfo, nullptr, &fence));
+		VK_CHECK_RESULT(vkCreateFence(logicalDevice, &fenceInfo, VK_NULL_HANDLE, &fence));
 		// Submit to the queue
 		VK_CHECK_RESULT(vkQueueSubmit(queue, 1, &submitInfo, fence));
 		// Wait for the fence to signal that command buffer has finished executing
 		VK_CHECK_RESULT(vkWaitForFences(logicalDevice, 1, &fence, VK_TRUE, DEFAULT_FENCE_TIMEOUT));
-		vkDestroyFence(logicalDevice, fence, nullptr);
+		vkDestroyFence(logicalDevice, fence, VK_NULL_HANDLE);
 		if (free)
 		{
 			vkFreeCommandBuffers(logicalDevice, pool, 1, &commandBuffer);

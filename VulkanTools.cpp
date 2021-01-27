@@ -73,7 +73,7 @@ namespace vks
 			}
 		}
 
-		VkBool32 getSupportedDepthFormat(VkPhysicalDevice physicalDevice, VkFormat *depthFormat)
+		bool getSupportedDepthFormat(VkPhysicalDevice physicalDevice, VkFormat* depthFormat)
 		{
 			// Since all depth formats may be optional, we need to find a suitable depth format to use
 			// Start with the highest precision packed format
@@ -236,8 +236,8 @@ namespace vks
 				srcStageMask,
 				dstStageMask,
 				0,
-				0, nullptr,
-				0, nullptr,
+				0, VK_NULL_HANDLE,
+				0, VK_NULL_HANDLE,
 				1, &imageMemoryBarrier);
 		}
 
@@ -283,8 +283,8 @@ namespace vks
 				srcStageMask,
 				dstStageMask,
 				0,
-				0, nullptr,
-				0, nullptr,
+				0, VK_NULL_HANDLE,
+				0, VK_NULL_HANDLE,
 				1, &imageMemoryBarrier);
 		}
 

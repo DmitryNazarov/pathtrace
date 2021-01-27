@@ -13,21 +13,6 @@
 /** @brief Creates the platform specific surface abstraction of the native platform window used for presentation */	
 void VulkanSwapChain::initSurface(GLFWwindow* window)
 {
-	//VkResult err = VK_SUCCESS;
-
-	//// Create the os-specific surface
-	//VkWin32SurfaceCreateInfoKHR surfaceCreateInfo = {};
-	//surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-	//surfaceCreateInfo.hinstance = (HINSTANCE)platformHandle;
-	//surfaceCreateInfo.hwnd = (HWND)platformWindow;
-	//err = vkCreateWin32SurfaceKHR(instance, &surfaceCreateInfo, nullptr, &surface);
-
-	//if (err != VK_SUCCESS) {
-	//	vks::tools::exitFatal("Could not create surface!", err);
-	//}
-
-
-
 	if (glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create window surface!");
 	}
@@ -294,7 +279,7 @@ void VulkanSwapChain::create(uint32_t *width, uint32_t *height, bool vsync)
 		swapchainCI.imageUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 	}
 
-	VK_CHECK_RESULT(fpCreateSwapchainKHR(device, &swapchainCI, nullptr, &swapChain));
+	VK_CHECK_RESULT(fpCreateSwapchainKHR(device, &swapchainCI, VK_NULL_HANDLE, &swapChain));
 
 	// If an existing swap chain is re-created, destroy the old swap chain
 	// This also cleans up all the presentable images
@@ -302,11 +287,11 @@ void VulkanSwapChain::create(uint32_t *width, uint32_t *height, bool vsync)
 	{ 
 		for (uint32_t i = 0; i < imageCount; i++)
 		{
-			vkDestroyImageView(device, buffers[i].view, nullptr);
+			vkDestroyImageView(device, buffers[i].view, VK_NULL_HANDLE);
 		}
-		fpDestroySwapchainKHR(device, oldSwapchain, nullptr);
+		fpDestroySwapchainKHR(device, oldSwapchain, VK_NULL_HANDLE);
 	}
-	VK_CHECK_RESULT(fpGetSwapchainImagesKHR(device, swapChain, &imageCount, NULL));
+	VK_CHECK_RESULT(fpGetSwapchainImagesKHR(device, swapChain, &imageCount, VK_NULL_HANDLE));
 
 	// Get the swap chain images
 	images.resize(imageCount);
@@ -318,7 +303,6 @@ void VulkanSwapChain::create(uint32_t *width, uint32_t *height, bool vsync)
 	{
 		VkImageViewCreateInfo colorAttachmentView = {};
 		colorAttachmentView.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-		colorAttachmentView.pNext = NULL;
 		colorAttachmentView.format = colorFormat;
 		colorAttachmentView.components = {
 			VK_COMPONENT_SWIZZLE_R,
@@ -338,7 +322,7 @@ void VulkanSwapChain::create(uint32_t *width, uint32_t *height, bool vsync)
 
 		colorAttachmentView.image = buffers[i].image;
 
-		VK_CHECK_RESULT(vkCreateImageView(device, &colorAttachmentView, nullptr, &buffers[i].view));
+		VK_CHECK_RESULT(vkCreateImageView(device, &colorAttachmentView, VK_NULL_HANDLE, &buffers[i].view));
 	}
 }
 
@@ -356,7 +340,7 @@ VkResult VulkanSwapChain::acquireNextImage(VkSemaphore presentCompleteSemaphore,
 {
 	// By setting timeout to UINT64_MAX we will always wait until the next image has been acquired or an actual error is thrown
 	// With that we don't have to handle VK_NOT_READY
-	return fpAcquireNextImageKHR(device, swapChain, UINT64_MAX, presentCompleteSemaphore, (VkFence)nullptr, imageIndex);
+	return fpAcquireNextImageKHR(device, swapChain, UINT64_MAX, presentCompleteSemaphore, (VkFence)VK_NULL_HANDLE, imageIndex);
 }
 
 /**
@@ -395,13 +379,13 @@ void VulkanSwapChain::cleanup()
 	{
 		for (uint32_t i = 0; i < imageCount; i++)
 		{
-			vkDestroyImageView(device, buffers[i].view, nullptr);
+			vkDestroyImageView(device, buffers[i].view, VK_NULL_HANDLE);
 		}
 	}
 	if (surface != VK_NULL_HANDLE)
 	{
-		fpDestroySwapchainKHR(device, swapChain, nullptr);
-		vkDestroySurfaceKHR(instance, surface, nullptr);
+		fpDestroySwapchainKHR(device, swapChain, VK_NULL_HANDLE);
+		vkDestroySurfaceKHR(instance, surface, VK_NULL_HANDLE);
 	}
 	surface = VK_NULL_HANDLE;
 	swapChain = VK_NULL_HANDLE;

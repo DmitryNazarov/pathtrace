@@ -38,9 +38,7 @@ struct VulkanDevice
 	/** @brief List of extensions supported by the device */
 	std::vector<std::string> supportedExtensions;
 	/** @brief Default command pool for the graphics queue family index */
-	VkCommandPool commandPool = VK_NULL_HANDLE;
-	/** @brief Set to true when the debug marker extension is detected */
-	bool enableDebugMarkers = false;
+	VkCommandPool commandPool;
 	/** @brief Contains queue family indices */
 	struct
 	{
@@ -54,12 +52,12 @@ struct VulkanDevice
 	};
 	explicit VulkanDevice(VkPhysicalDevice physicalDevice);
 	~VulkanDevice();
-	uint32_t        getMemoryType(uint32_t typeBits, VkMemoryPropertyFlags properties, VkBool32 *memTypeFound = nullptr) const;
+	uint32_t        getMemoryType(uint32_t typeBits, VkMemoryPropertyFlags properties, VkBool32 *memTypeFound = VK_NULL_HANDLE) const;
 	uint32_t        getQueueFamilyIndex(VkQueueFlagBits queueFlags) const;
 	VkResult        createLogicalDevice(VkPhysicalDeviceFeatures enabledFeatures, std::vector<const char *> enabledExtensions, void *pNextChain, bool useSwapChain = true, VkQueueFlags requestedQueueTypes = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
 	VkResult        createBuffer(VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memoryPropertyFlags, VkDeviceSize size, VkBuffer *buffer, VkDeviceMemory *memory, void *data = nullptr);
 	VkResult        createBuffer(VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memoryPropertyFlags, vks::Buffer *buffer, VkDeviceSize size, void *data = nullptr);
-	void            copyBuffer(vks::Buffer *src, vks::Buffer *dst, VkQueue queue, VkBufferCopy *copyRegion = nullptr);
+	void            copyBuffer(vks::Buffer *src, vks::Buffer *dst, VkQueue queue, VkBufferCopy *copyRegion = VK_NULL_HANDLE);
 	VkCommandPool   createCommandPool(uint32_t queueFamilyIndex, VkCommandPoolCreateFlags createFlags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 	VkCommandBuffer createCommandBuffer(VkCommandBufferLevel level, VkCommandPool pool, bool begin = false);
 	VkCommandBuffer createCommandBuffer(VkCommandBufferLevel level, bool begin = false);

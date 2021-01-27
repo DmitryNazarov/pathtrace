@@ -125,11 +125,11 @@ namespace vks
 	{
 		if (buffer)
 		{
-			vkDestroyBuffer(device, buffer, nullptr);
+			vkDestroyBuffer(device, buffer, VK_NULL_HANDLE);
 		}
 		if (memory)
 		{
-			vkFreeMemory(device, memory, nullptr);
+			vkFreeMemory(device, memory, VK_NULL_HANDLE);
 		}
 	}
 };

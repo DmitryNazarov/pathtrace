@@ -251,6 +251,7 @@ private:
 		glm::mat4 projInverse;
 		uint32_t pointLightsNum;
 		uint32_t directLightsNum;
+		uint32_t quadLightsNum;
 	} uniformData;
 	vks::Buffer uboData;
 
@@ -309,7 +310,8 @@ private:
 		{ "pointLightsBuffer", 6 },
 		{ "directLightsBuffer", 7 },
 		{ "triangleMaterialsBuffer", 8 },
-		{ "sphereMaterialsBuffer", 9 }
+		{ "sphereMaterialsBuffer", 9 },
+		{ "quadLightsBuffer", 10 }
 	};
 
 	VulkanDebug vkDebug;

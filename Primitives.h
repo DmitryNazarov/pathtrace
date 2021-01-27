@@ -68,4 +68,13 @@ struct PointLight {
   vec3 attenuation{ 1.0f, 0.0f, 0.0f };
 };
 
+struct QuadLight {
+  QuadLight(const vec3& pos, const vec3& abSide, const vec3& acSide, const vec4& color) :
+    pos(pos), abSide(abSide), acSide(acSide), color(color)
+  {}
+
+  vec3 pos, abSide, acSide;
+  alignas(16) vec4 color;
+};
+
 #endif // PRIMITIVES_H

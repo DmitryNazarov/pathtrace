@@ -295,17 +295,17 @@ VulkanRaytracer::VulkanRaytracer(const std::vector<std::string>& args)
 		}
 	}
 
-	//scene.loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\test_scene.test");
-	//scene.loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene1.test");
-	//scene.loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene2.test");
-	//scene.loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene3.test");
-	//scene.loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene4-ambient.test");
-	//scene.loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene4-diffuse.test");
-	//scene.loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene4-emission.test");
-	//scene.loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene4-specular.test");
-	//scene.loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene5.test");
-	scene.loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene6.test");
-	//scene.loadScene("E:\\Programming\\pt_gAPIs\\vulcan_empty2\\data\\scene7.test");
+	//scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\test_scene.test");
+	//scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\scene1.test");
+	//scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\scene2.test");
+	//scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\scene3.test");
+	//scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\scene4-ambient.test");
+	//scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\scene4-diffuse.test");
+	//scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\scene4-emission.test");
+	//scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\scene4-specular.test");
+	//scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\scene5.test");
+	scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\scene6.test");
+	//scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\scene7.test");
 
 	height = scene.height;
 	width = scene.width;
@@ -353,6 +353,8 @@ VulkanRaytracer::~VulkanRaytracer()
 	vkFreeMemory(device, scene.triangleMaterialsBuf.memory, VK_NULL_HANDLE);
 	vkDestroyBuffer(device, scene.sphereMaterialsBuf.buffer, VK_NULL_HANDLE);
 	vkFreeMemory(device, scene.sphereMaterialsBuf.memory, VK_NULL_HANDLE);
+	vkDestroyBuffer(device, scene.quadLightsBuf.buffer, VK_NULL_HANDLE);
+	vkFreeMemory(device, scene.quadLightsBuf.memory, VK_NULL_HANDLE);
 
 	uboData.destroy();
 
@@ -861,7 +863,7 @@ void VulkanRaytracer::deleteAccelerationStructure(AccelerationStructure& acceler
 */
 void VulkanRaytracer::createBottomLevelAccelerationStructureTriangles()
 {
-	uint32_t numTriangles = scene.indicesBuf.count / 3;
+	uint32_t numTriangles = scene.indices.size() / 3;
 
 	VkDeviceOrHostAddressConstKHR vertexBufferDeviceAddress{};
   vertexBufferDeviceAddress.deviceAddress = getBufferDeviceAddress(scene.verticesBuf.buffer);
@@ -876,7 +878,7 @@ void VulkanRaytracer::createBottomLevelAccelerationStructureTriangles()
 	accelerationStructureGeometry.geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
 	accelerationStructureGeometry.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
 	accelerationStructureGeometry.geometry.triangles.vertexData = vertexBufferDeviceAddress;
-	accelerationStructureGeometry.geometry.triangles.maxVertex = scene.verticesBuf.count;
+	accelerationStructureGeometry.geometry.triangles.maxVertex = scene.vertices.size();
 	accelerationStructureGeometry.geometry.triangles.vertexStride = sizeof(Vertex);
 	accelerationStructureGeometry.geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
 	accelerationStructureGeometry.geometry.triangles.indexData = indexBufferDeviceAddress;
@@ -1071,7 +1073,7 @@ void VulkanRaytracer::createTopLevelAccelerationStructure()
 	accelerationStructureGeometry.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
 	accelerationStructureGeometry.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
 	accelerationStructureGeometry.geometry.instances.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
-	accelerationStructureGeometry.geometry.instances.arrayOfPointers = VK_FALSE;  //???????????????????????????????
+	accelerationStructureGeometry.geometry.instances.arrayOfPointers = VK_FALSE;
 	accelerationStructureGeometry.geometry.instances.data = instanceDataDeviceAddress;
 
 	// Get size info
@@ -1215,19 +1217,47 @@ void VulkanRaytracer::createDescriptorSets()
 	VkDescriptorBufferInfo directLightsBufferDescriptor{ scene.directLightsBuf.buffer , 0, VK_WHOLE_SIZE };
 	VkDescriptorBufferInfo triangleMaterialsBufferDescriptor{ scene.triangleMaterialsBuf.buffer , 0, VK_WHOLE_SIZE };
 	VkDescriptorBufferInfo sphereMaterialsBufferDescriptor{ scene.sphereMaterialsBuf.buffer , 0, VK_WHOLE_SIZE };
+	VkDescriptorBufferInfo quadLightsBufferDescriptor{ scene.quadLightsBuf.buffer , 0, VK_WHOLE_SIZE };
 
 	std::vector<VkWriteDescriptorSet> writeDescriptorSets = {
-		accelerationStructureWrite,
+	accelerationStructureWrite,
 		vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, descriptorSetBindings["resultImage"], &storageImageDescriptor),
 		vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptorSetBindings["uniformBuffer"], &uboData.descriptor),
 		vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorSetBindings["vertexBuffer"], &vertexBufferDescriptor),
-		vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorSetBindings["sphereBuffer"], &sphereBufferDescriptor),
-		vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorSetBindings["indexBuffer"], &indexBufferDescriptor),
-		vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorSetBindings["pointLightsBuffer"], &pointLightsBufferDescriptor),
-		vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorSetBindings["directLightsBuffer"], &directLightsBufferDescriptor),
-		vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorSetBindings["triangleMaterialsBuffer"], &triangleMaterialsBufferDescriptor),
-		vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorSetBindings["sphereMaterialsBuffer"], &sphereMaterialsBufferDescriptor)
+		vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorSetBindings["indexBuffer"], &indexBufferDescriptor)
 	};
+
+	if (!scene.spheres.empty())
+	{
+		writeDescriptorSets.push_back(vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			descriptorSetBindings["sphereBuffer"], &sphereBufferDescriptor));
+	}
+	if (!scene.pointLights.empty())
+	{
+		writeDescriptorSets.push_back(vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			descriptorSetBindings["pointLightsBuffer"], &pointLightsBufferDescriptor));
+	}
+	if (!scene.directLights.empty())
+	{
+		writeDescriptorSets.push_back(vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			descriptorSetBindings["directLightsBuffer"], &directLightsBufferDescriptor));
+	}
+	if (!scene.triangleMaterials.empty())
+	{
+		writeDescriptorSets.push_back(vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			descriptorSetBindings["triangleMaterialsBuffer"], &triangleMaterialsBufferDescriptor));
+	}
+	if (!scene.sphereMaterials.empty())
+	{
+		writeDescriptorSets.push_back(vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			descriptorSetBindings["sphereMaterialsBuffer"], &sphereMaterialsBufferDescriptor));
+	}
+	if (!scene.quadLights.empty())
+	{
+		writeDescriptorSets.push_back(vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			descriptorSetBindings["quadLightsBuffer"], &quadLightsBufferDescriptor));
+	}
+
 	vkUpdateDescriptorSets(device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, VK_NULL_HANDLE);
 }
 
@@ -1281,7 +1311,8 @@ void VulkanRaytracer::createRayTracingPipeline()
 		descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, descriptorSetBindings["pointLightsBuffer"]),
 		descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, descriptorSetBindings["directLightsBuffer"]),
 		descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, descriptorSetBindings["triangleMaterialsBuffer"]),
-		descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, descriptorSetBindings["sphereMaterialsBuffer"])
+		descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, descriptorSetBindings["sphereMaterialsBuffer"]),
+		descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, descriptorSetBindings["quadLightsBuffer"])
 	});
 
 	VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI = descriptorSetLayoutCreateInfo(bindings);
@@ -1500,8 +1531,9 @@ void VulkanRaytracer::updateUniformBuffers()
 {
 	uniformData.projInverse = glm::inverse(camera.matrices.perspective);
 	uniformData.viewInverse = glm::inverse(camera.matrices.view);
-	uniformData.pointLightsNum = scene.pointLightsBuf.count;
-	uniformData.directLightsNum = scene.directLightsBuf.count;
+	uniformData.pointLightsNum = scene.pointLights.size();
+	uniformData.directLightsNum = scene.directLights.size();
+	uniformData.quadLightsNum = scene.quadLights.size();
 	memcpy(uboData.mapped, &uniformData, sizeof(uniformData));
 }
 

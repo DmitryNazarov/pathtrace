@@ -11,12 +11,16 @@
 #include <VulkanDebug.h>
 
 
-struct VArray
+struct BufferDedicated
 {
-  uint32_t count;
-  VkBuffer buffer;
-  VkDeviceMemory memory;
+  VkBuffer buffer = VK_NULL_HANDLE;
+  VkDeviceMemory memory = VK_NULL_HANDLE;
 };
+
+//struct StagingBuffer {
+//  VkBuffer buffer = VK_NULL_HANDLE;
+//  VkDeviceMemory memory = VK_NULL_HANDLE;
+//};
 
 class Scene
 {
@@ -29,9 +33,11 @@ public:
   vec3 center;
   vec3 upInit;
   float fovy = 90;
+  std::string integratorName = "raytracer";
 
   std::vector<DirectionLight> directLights;
   std::vector<PointLight> pointLights;
+  std::vector<QuadLight> quadLights;
 
   std::vector<Sphere> spheres;
   std::vector<Aabb> aabbs;
@@ -41,13 +47,25 @@ public:
   std::vector<Material> triangleMaterials;
   std::vector<Material> sphereMaterials;
 
-  VArray verticesBuf, indicesBuf, spheresBuf, aabbsBuf, pointLightsBuf, directLightsBuf, triangleMaterialsBuf, sphereMaterialsBuf;
+  BufferDedicated verticesBuf, indicesBuf, spheresBuf, aabbsBuf, pointLightsBuf,
+    directLightsBuf, triangleMaterialsBuf, sphereMaterialsBuf, quadLightsBuf;
 
   void loadScene(const std::string& filename);
   void loadVulkanBuffersForScene(const VulkanDebug& vkDebug, vks::VulkanDevice* device, VkQueue transferQueue);
 
 private:
+  void createBuffer(vks::VulkanDevice* device,
+    VkCommandBuffer cmdBuf,
+    VkBuffer* buffer,
+    VkDeviceMemory* memory,
+    VkDeviceSize size_,
+    void* data_,
+    VkBufferUsageFlags     usage_,
+    VkMemoryPropertyFlags  memProps = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+private:
   VulkanDebug vkDebug;
+  std::vector<BufferDedicated> m_stagingBuffers;
 };
 
 template <typename T>

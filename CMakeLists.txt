@@ -33,8 +33,11 @@ target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${GLFW_DIR}/include Vul
 target_link_libraries(${PROJECT_NAME} PUBLIC glfw ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARIES} Vulkan::Vulkan)
 
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
+
 if(${DEBUG})
     target_compile_definitions(${PROJECT_NAME} PUBLIC -DVALIDATION=\"true\")
+else()
+    target_link_options(${PROJECT_NAME} PRIVATE "/SUBSYSTEM:WINDOWS" "/ENTRY:mainCRTStartup")
 endif()
 
 # ------------------------- Compile Shaders -------------------------

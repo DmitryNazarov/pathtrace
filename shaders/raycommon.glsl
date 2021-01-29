@@ -39,6 +39,16 @@ struct Material
 	float shininess;
 };
 
+struct QuadLight
+{
+	vec3 pos;
+	vec3 abSide;
+	vec3 acSide;
+	vec4 color;
+};
+
+const float PI = 3.1415926535897932384626433832795;
+
 struct RayPayload
 {
 	vec3 color;

@@ -73,7 +73,7 @@ struct QuadLight {
     pos(pos), abSide(abSide), acSide(acSide), color(color)
   {}
 
-  vec3 pos, abSide, acSide;
+  alignas(16) vec3 pos, abSide, acSide;
   alignas(16) vec4 color;
 };
 

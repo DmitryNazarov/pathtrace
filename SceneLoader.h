@@ -17,17 +17,12 @@ struct BufferDedicated
   VkDeviceMemory memory = VK_NULL_HANDLE;
 };
 
-//struct StagingBuffer {
-//  VkBuffer buffer = VK_NULL_HANDLE;
-//  VkDeviceMemory memory = VK_NULL_HANDLE;
-//};
-
 class Scene
 {
 public:
   size_t width = 640, height = 480;
   float aspect;
-  uint32_t depth = 5;
+  uint32_t depth = 1; //5; default 5 but for direct light shading turn off
   std::string screenshotName = "screenshot.png";
   vec3 eyeInit;
   vec3 center;

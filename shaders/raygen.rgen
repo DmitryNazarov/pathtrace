@@ -11,6 +11,7 @@ layout(binding = 2, set = 0) uniform UBO
 	mat4 projInverse;
 	uint pointLightsNum;
 	uint directLightsNum;
+	uint quadLightsNum;
 } ubo;
 layout(location = 0) rayPayloadEXT RayPayload rayPayload;
 layout(constant_id = 0) const int MAX_RECURSION = 0;

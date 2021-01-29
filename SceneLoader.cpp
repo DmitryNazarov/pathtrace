@@ -62,7 +62,7 @@ void Scene::loadScene(const std::string& filename)
   std::vector<vec3> sceneVertices;
   std::vector<std::pair<vec3, vec3>> vertexNormals;
 
-  vec4 ambient{ 0.2f, 0.2f, 0.2f, 1.0f };
+  vec4 ambient{ 0.0f, 0.0f, 0.0f, 1.0f }; // no ambient for direct light
   vec4 diffuse{ 0.0f, 0.0f, 0.0f, 0.0f };
   vec4 specular{ 0.0f, 0.0f, 0.0f, 0.0f };
   vec4 emission{ 0.0f, 0.0f, 0.0f, 0.0f };
@@ -248,11 +248,30 @@ void Scene::loadScene(const std::string& filename)
     {
       float values[12];
       if (readvals(ss, 12, values)) {
-        auto pos = vec3(values[0], values[1], values[2]);
-        auto abSide = vec3(values[3], values[4], values[5]);
-        auto acSide = vec3(values[6], values[7], values[8]);
+        auto pos = transfstack.top() * vec4(values[0], values[1], values[2], 1.0f);
+        auto abSide = transfstack.top() * vec4(values[3], values[4], values[5], 1.0f);
+        auto acSide = transfstack.top() * vec4(values[6], values[7], values[8], 1.0f);
         auto color = vec4(values[9], values[10], values[11], 1.0f);
         quadLights.emplace_back(pos, abSide, acSide, color);
+
+        // add 2 triangles to visualize quad light
+        vec3 pos0 = pos;
+        vec3 pos1 = pos + abSide;
+        vec3 pos2 = pos + abSide + acSide;
+        vec3 pos3 = pos + acSide;
+        vec3 normal = normalize(cross(pos1 - pos0, pos2 - pos0));
+        uint32_t index0 = addToVertices(vertices, Vertex(pos0, normal));
+        uint32_t index1 = addToVertices(vertices, Vertex(pos1, normal));
+        uint32_t index2 = addToVertices(vertices, Vertex(pos2, normal));
+        uint32_t index3 = addToVertices(vertices, Vertex(pos3, normal));
+        indices.push_back(index0);
+        indices.push_back(index1);
+        indices.push_back(index2);
+        indices.push_back(index0);
+        indices.push_back(index2);
+        indices.push_back(index3);
+        triangleMaterials.emplace_back(vec4(vec3(0.0f), 1.0f), vec4(vec3(0.0f), 1.0f), vec4(vec3(0.0f), 1.0f), color, 0.0f);
+        triangleMaterials.emplace_back(vec4(vec3(0.0f), 1.0f), vec4(vec3(0.0f), 1.0f), vec4(vec3(0.0f), 1.0f), color, 0.0f);
       }
     }
     else if (cmd == "integrator")  // integrator <name>

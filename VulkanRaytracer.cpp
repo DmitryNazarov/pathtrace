@@ -304,8 +304,9 @@ VulkanRaytracer::VulkanRaytracer(const std::vector<std::string>& args)
 	//scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\scene4-emission.test");
 	//scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\scene4-specular.test");
 	//scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\scene5.test");
-	scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\scene6.test");
+	//scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\scene6.test");
 	//scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\scene7.test");
+	scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\analytic.test");
 
 	height = scene.height;
 	width = scene.width;
@@ -334,7 +335,10 @@ VulkanRaytracer::~VulkanRaytracer()
 	vkDestroyImage(device, storageImage.image, VK_NULL_HANDLE);
 	vkFreeMemory(device, storageImage.memory, VK_NULL_HANDLE);
 	deleteAccelerationStructure(trianglesBlas);
-	deleteAccelerationStructure(spheresBlas);
+	if (!scene.spheres.empty())
+	{
+		deleteAccelerationStructure(spheresBlas);
+	}
 	deleteAccelerationStructure(topLevelAS);
 
 	vkDestroyBuffer(device, scene.verticesBuf.buffer, VK_NULL_HANDLE);
@@ -953,6 +957,9 @@ void VulkanRaytracer::createBottomLevelAccelerationStructureTriangles()
 void VulkanRaytracer::createBottomLevelAccelerationStructureSpheres()
 {
 	uint32_t numAabbs = scene.aabbs.size();
+	if (!numAabbs)
+		return;
+
 	VkDeviceOrHostAddressConstKHR aabbBufferDeviceAddress{};
 	aabbBufferDeviceAddress.deviceAddress = getBufferDeviceAddress(scene.aabbsBuf.buffer);
 
@@ -1051,10 +1058,13 @@ void VulkanRaytracer::createTopLevelAccelerationStructure()
 	instance.accelerationStructureReference = trianglesBlas.deviceAddress;
 	instances.push_back(instance);
 
-	instance.instanceCustomIndex = 1;
-	instance.instanceShaderBindingTableRecordOffset = 1;
-	instance.accelerationStructureReference = spheresBlas.deviceAddress;
-	instances.push_back(instance);
+	if (!scene.spheres.empty())
+	{
+		instance.instanceCustomIndex = 1;
+		instance.instanceShaderBindingTableRecordOffset = 1;
+		instance.accelerationStructureReference = spheresBlas.deviceAddress;
+		instances.push_back(instance);
+	}
 
 	// Buffer for instance data
 	vks::Buffer instancesBuffer;
@@ -1084,7 +1094,7 @@ void VulkanRaytracer::createTopLevelAccelerationStructure()
 	accelerationStructureBuildGeometryInfo.geometryCount = 1;
 	accelerationStructureBuildGeometryInfo.pGeometries = &accelerationStructureGeometry;
 
-	uint32_t primitiveCount = 2;
+	uint32_t primitiveCount = instances.size();
 	VkAccelerationStructureBuildSizesInfoKHR accelerationStructureBuildSizesInfo{};
 	accelerationStructureBuildSizesInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
 	vkGetAccelerationStructureBuildSizesKHR(
@@ -1362,7 +1372,14 @@ void VulkanRaytracer::createRayTracingPipeline()
 	shaderGroups.push_back(missShaderGroup);
 
 	// Closest hit group
-	shaderStages.push_back(loadShader("shaders/closesthit.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR));
+	if (scene.integratorName == "raytracing")
+	{
+		shaderStages.push_back(loadShader("shaders/closesthit.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR));
+	}
+	else if (scene.integratorName == "analyticdirect")
+	{
+		shaderStages.push_back(loadShader("shaders/closesthit_analyticdirect.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR));
+	}
 	VkRayTracingShaderGroupCreateInfoKHR closestHitShaderGroup{};
 	closestHitShaderGroup.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
 	closestHitShaderGroup.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
@@ -1373,7 +1390,14 @@ void VulkanRaytracer::createRayTracingPipeline()
 	shaderGroups.push_back(closestHitShaderGroup);
 
 	// Intersection hit group (Closest hit + Intersection(procedural))
-	shaderStages.push_back(loadShader("shaders/closesthit_spheres.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR));
+	if (scene.integratorName == "raytracing")
+	{
+		shaderStages.push_back(loadShader("shaders/closesthit_spheres.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR));
+	}
+	else if (scene.integratorName == "analyticdirect")
+	{
+		shaderStages.push_back(loadShader("shaders/closesthit_spheres_analyticdirect.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR));
+	}
 	VkRayTracingShaderGroupCreateInfoKHR intersecShaderGroup{};
 	intersecShaderGroup.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
 	intersecShaderGroup.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR;

@@ -1,8 +1,9 @@
 #include "VulkanRaytracer.h"
 
-int main() {
+int main(int argc, char* argv[]) {
 	try {
-		auto raytracer = std::make_unique<VulkanRaytracer>();
+		std::vector<std::string> args(argv, argv + argc);
+		auto raytracer = std::make_unique<VulkanRaytracer>(args);
 		raytracer->initAPIs();
 		raytracer->setupWindow();
 		raytracer->prepare();

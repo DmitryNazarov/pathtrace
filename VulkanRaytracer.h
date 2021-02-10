@@ -21,6 +21,8 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include <FreeImage.h>
+
 #include "VulkanTools.h"
 #include "VulkanDebug.h"
 #include "VulkanSwapChain.h"
@@ -88,6 +90,8 @@ private:
 	void submitFrame();
 	/** @brief (Virtual) Default image acquire + submission and command buffer submission function */
 	virtual void renderFrame();
+
+	void saveScreenshot(const std::string& filename);
 
 	ScratchBuffer createScratchBuffer(VkDeviceSize size);
 	void deleteScratchBuffer(ScratchBuffer& scratchBuffer);

@@ -15,6 +15,7 @@ layout(binding = 2, set = 0) uniform UBO
 	mat4 projInverse;
 	uint pointLightsNum;
 	uint directLightsNum;
+	uint quadLightsNum;
 } ubo;
 layout(binding = 3, set = 0) buffer Vertices { Vertex v[]; } vertices;
 layout(binding = 4, set = 0) buffer Indices { uint i[]; } indices;

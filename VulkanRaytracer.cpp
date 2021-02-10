@@ -282,6 +282,8 @@ VulkanRaytracer::VulkanRaytracer(const std::vector<std::string>& args)
 	settings.validation = false;
 #endif // VALIDATION
 
+	std::string scenePath;
+
 	// Parse command line arguments
 	for (size_t i = 0; i < args.size(); ++i)
 	{
@@ -293,21 +295,27 @@ VulkanRaytracer::VulkanRaytracer(const std::vector<std::string>& args)
 		{
 			selectedDevice = std::atoi(args[i + 1].c_str());
 		}
+		else if (args[i] == "-s" || args[i] == "-scene")
+		{
+			scenePath = args[i + 1];
+		}
 	}
 
-	//scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\test_scene.test");
-	//scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\scene1.test");
-	//scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\scene2.test");
-	//scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\scene3.test");
-	//scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\scene4-ambient.test");
-	//scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\scene4-diffuse.test");
-	//scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\scene4-emission.test");
-	//scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\scene4-specular.test");
-	//scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\scene5.test");
-	//scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\scene6.test");
-	//scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\scene7.test");
-	scene.loadScene("E:\\Programming\\edx_cse168\\hw2\\data\\analytic.test");
+	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\test_scene.test";
+	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\scene1.test";
+	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\scene2.test";
+	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\scene3.test";
+	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\scene4-ambient.test";
+	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\scene4-diffuse.test";
+	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\scene4-emission.test";
+	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\scene4-specular.test";
+	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\scene5.test";
+	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\scene6.test";
+	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\scene7.test";
+	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\analytic.test";
 
+	std::cout << scenePath << std::endl;
+	scene.loadScene(scenePath);
 	height = scene.height;
 	width = scene.width;
 
@@ -334,7 +342,10 @@ VulkanRaytracer::~VulkanRaytracer()
 	vkDestroyImageView(device, storageImage.view, VK_NULL_HANDLE);
 	vkDestroyImage(device, storageImage.image, VK_NULL_HANDLE);
 	vkFreeMemory(device, storageImage.memory, VK_NULL_HANDLE);
-	deleteAccelerationStructure(trianglesBlas);
+	if (!scene.vertices.empty())
+	{
+		deleteAccelerationStructure(trianglesBlas);
+	}
 	if (!scene.spheres.empty())
 	{
 		deleteAccelerationStructure(spheresBlas);
@@ -395,9 +406,14 @@ VulkanRaytracer::~VulkanRaytracer()
 
 	delete vulkanDevice;
 
-	vkDebug.destroy(instance);
+	if (settings.validation)
+	{
+		vkDebug.destroy(instance);
+	}
 
 	vkDestroyInstance(instance, VK_NULL_HANDLE);
+
+	FreeImage_DeInitialise();
 
 	glfwDestroyWindow(window);
 	glfwTerminate();
@@ -406,6 +422,8 @@ VulkanRaytracer::~VulkanRaytracer()
 bool VulkanRaytracer::initAPIs()
 {
 	glfwInit();
+
+	FreeImage_Initialise();
 
 	 VkResult err = createInstance();
 	if (err) {
@@ -673,6 +691,205 @@ void VulkanRaytracer::setupRenderPass()
 	VK_CHECK_RESULT(vkCreateRenderPass(device, &renderPassInfo, VK_NULL_HANDLE, &renderPass));
 }
 
+void VulkanRaytracer::saveScreenshot(const std::string& filename)
+{
+	bool supportsBlit = true;
+
+	// Check blit support for source and destination
+	VkFormatProperties formatProps;
+
+	// Check if the device supports blitting from optimal images (the swapchain images are in optimal format)
+	vkGetPhysicalDeviceFormatProperties(physicalDevice, swapChain.colorFormat, &formatProps);
+	if (!(formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT)) {
+		std::cerr << "Device does not support blitting from optimal tiled images, using copy instead of blit!" << std::endl;
+		supportsBlit = false;
+	}
+
+	// Check if the device supports blitting to linear images
+	vkGetPhysicalDeviceFormatProperties(physicalDevice, VK_FORMAT_R8G8B8A8_UNORM, &formatProps);
+	if (!(formatProps.linearTilingFeatures & VK_FORMAT_FEATURE_BLIT_DST_BIT)) {
+		std::cerr << "Device does not support blitting to linear tiled images, using copy instead of blit!" << std::endl;
+		supportsBlit = false;
+	}
+
+	// Source for the copy is the last rendered swapchain image
+	VkImage srcImage = swapChain.images[currentBuffer];
+
+	// Create the linear tiled destination image to copy to and to read the memory from
+	VkImageCreateInfo imageCreateCI(vks::initializers::imageCreateInfo());
+	imageCreateCI.imageType = VK_IMAGE_TYPE_2D;
+	// Note that vkCmdBlitImage (if supported) will also do format conversions if the swapchain color format would differ
+	imageCreateCI.format = VK_FORMAT_R8G8B8A8_UNORM;
+	imageCreateCI.extent.width = width;
+	imageCreateCI.extent.height = height;
+	imageCreateCI.extent.depth = 1;
+	imageCreateCI.arrayLayers = 1;
+	imageCreateCI.mipLevels = 1;
+	imageCreateCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	imageCreateCI.samples = VK_SAMPLE_COUNT_1_BIT;
+	imageCreateCI.tiling = VK_IMAGE_TILING_LINEAR;
+	imageCreateCI.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	// Create the image
+	VkImage dstImage;
+	VK_CHECK_RESULT(vkCreateImage(device, &imageCreateCI, nullptr, &dstImage));
+	// Create memory to back up the image
+	VkMemoryRequirements memRequirements;
+	VkMemoryAllocateInfo memAllocInfo(vks::initializers::memoryAllocateInfo());
+	VkDeviceMemory dstImageMemory;
+	vkGetImageMemoryRequirements(device, dstImage, &memRequirements);
+	memAllocInfo.allocationSize = memRequirements.size;
+	// Memory must be host visible to copy from
+	memAllocInfo.memoryTypeIndex = vulkanDevice->getMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+	VK_CHECK_RESULT(vkAllocateMemory(device, &memAllocInfo, nullptr, &dstImageMemory));
+	VK_CHECK_RESULT(vkBindImageMemory(device, dstImage, dstImageMemory, 0));
+
+	// Do the actual blit from the swapchain image to our host visible destination image
+	VkCommandBuffer copyCmd = vulkanDevice->createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
+
+	// Transition destination image to transfer destination layout
+	vks::tools::insertImageMemoryBarrier(
+		copyCmd,
+		dstImage,
+		0,
+		VK_ACCESS_TRANSFER_WRITE_BIT,
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		VK_PIPELINE_STAGE_TRANSFER_BIT,
+		VK_PIPELINE_STAGE_TRANSFER_BIT,
+		VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+
+	// Transition swapchain image from present to transfer source layout
+	vks::tools::insertImageMemoryBarrier(
+		copyCmd,
+		srcImage,
+		VK_ACCESS_MEMORY_READ_BIT,
+		VK_ACCESS_TRANSFER_READ_BIT,
+		VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+		VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+		VK_PIPELINE_STAGE_TRANSFER_BIT,
+		VK_PIPELINE_STAGE_TRANSFER_BIT,
+		VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+
+	// If source and destination support blit we'll blit as this also does automatic format conversion (e.g. from BGR to RGB)
+	if (supportsBlit)
+	{
+		// Define the region to blit (we will blit the whole swapchain image)
+		VkOffset3D blitSize;
+		blitSize.x = width;
+		blitSize.y = height;
+		blitSize.z = 1;
+		VkImageBlit imageBlitRegion{};
+		imageBlitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		imageBlitRegion.srcSubresource.layerCount = 1;
+		imageBlitRegion.srcOffsets[1] = blitSize;
+		imageBlitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		imageBlitRegion.dstSubresource.layerCount = 1;
+		imageBlitRegion.dstOffsets[1] = blitSize;
+
+		// Issue the blit command
+		vkCmdBlitImage(
+			copyCmd,
+			srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			1,
+			&imageBlitRegion,
+			VK_FILTER_NEAREST);
+	}
+	else
+	{
+		// Otherwise use image copy (requires us to manually flip components)
+		VkImageCopy imageCopyRegion{};
+		imageCopyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		imageCopyRegion.srcSubresource.layerCount = 1;
+		imageCopyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		imageCopyRegion.dstSubresource.layerCount = 1;
+		imageCopyRegion.extent.width = width;
+		imageCopyRegion.extent.height = height;
+		imageCopyRegion.extent.depth = 1;
+
+		// Issue the copy command
+		vkCmdCopyImage(
+			copyCmd,
+			srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			1,
+			&imageCopyRegion);
+	}
+
+	// Transition destination image to general layout, which is the required layout for mapping the image memory later on
+	vks::tools::insertImageMemoryBarrier(
+		copyCmd,
+		dstImage,
+		VK_ACCESS_TRANSFER_WRITE_BIT,
+		VK_ACCESS_MEMORY_READ_BIT,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		VK_IMAGE_LAYOUT_GENERAL,
+		VK_PIPELINE_STAGE_TRANSFER_BIT,
+		VK_PIPELINE_STAGE_TRANSFER_BIT,
+		VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+
+	// Transition back the swap chain image after the blit is done
+	vks::tools::insertImageMemoryBarrier(
+		copyCmd,
+		srcImage,
+		VK_ACCESS_TRANSFER_READ_BIT,
+		VK_ACCESS_MEMORY_READ_BIT,
+		VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+		VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+		VK_PIPELINE_STAGE_TRANSFER_BIT,
+		VK_PIPELINE_STAGE_TRANSFER_BIT,
+		VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+
+	vulkanDevice->flushCommandBuffer(copyCmd, queue);
+
+	// Get layout of the image (including row pitch)
+	VkImageSubresource subResource{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 0 };
+	VkSubresourceLayout subResourceLayout;
+	vkGetImageSubresourceLayout(device, dstImage, &subResource, &subResourceLayout);
+
+	// Map image memory so we can start copying from it
+	void* data;
+	vkMapMemory(device, dstImageMemory, 0, VK_WHOLE_SIZE, 0, &data);
+	auto* byteData = static_cast<uint8_t*>(data);
+	byteData += subResourceLayout.offset;
+
+	// If source is BGR (destination is always RGB) and we can't use blit (which does automatic conversion), we'll have to manually swizzle color components
+	bool colorSwizzle = false;
+	// Check if source is BGR
+	if (!supportsBlit)
+	{
+		std::vector<VkFormat> formatsBGR = { VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_B8G8R8A8_SNORM };
+		colorSwizzle = (std::find(formatsBGR.begin(), formatsBGR.end(), swapChain.colorFormat) != formatsBGR.end());
+	}
+
+	std::vector<uint8_t> buffer;
+	buffer.resize(height * width * 3, 0);
+
+	for (uint32_t y = 0; y < height; ++y)
+	{
+		auto* row = reinterpret_cast<uint32_t*>(byteData);
+		for (uint32_t x = 0; x < width; ++x)
+		{
+			uint32_t pixelPos = (y * width + x) * 3;
+			buffer[pixelPos] = *(reinterpret_cast<uint8_t*>(row));
+			buffer[pixelPos + 1] = *(reinterpret_cast<uint8_t*>(row) + 1);
+			buffer[pixelPos + 2] = *(reinterpret_cast<uint8_t*>(row) + 2);
+			++row;
+		}
+		byteData += subResourceLayout.rowPitch;
+	}
+
+	FIBITMAP* img = FreeImage_ConvertFromRawBits(buffer.data(), width, height, width * 3, 24, 0xFF0000, 0x00FF00, 0x0000FF, true);
+	FreeImage_Save(FIF_PNG, img, filename.c_str(), 0);
+
+	std::cout << "Screenshot " << filename << " saved to disk" << std::endl;
+
+	// Clean up resources
+	vkUnmapMemory(device, dstImageMemory);
+	vkFreeMemory(device, dstImageMemory, nullptr);
+	vkDestroyImage(device, dstImage, nullptr);
+}
+
 void VulkanRaytracer::windowResize()
 {
 	if (!prepared)
@@ -868,6 +1085,8 @@ void VulkanRaytracer::deleteAccelerationStructure(AccelerationStructure& acceler
 void VulkanRaytracer::createBottomLevelAccelerationStructureTriangles()
 {
 	uint32_t numTriangles = scene.indices.size() / 3;
+	if (!numTriangles)
+		return;
 
 	VkDeviceOrHostAddressConstKHR vertexBufferDeviceAddress{};
   vertexBufferDeviceAddress.deviceAddress = getBufferDeviceAddress(scene.verticesBuf.buffer);
@@ -1051,12 +1270,15 @@ void VulkanRaytracer::createTopLevelAccelerationStructure()
 	std::vector<VkAccelerationStructureInstanceKHR> instances;
 	VkAccelerationStructureInstanceKHR instance{};
 	instance.transform = transformMatrix;
-	instance.instanceCustomIndex = 0;
 	instance.mask = 0xFF;
-	instance.instanceShaderBindingTableRecordOffset = 0;
 	instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-	instance.accelerationStructureReference = trianglesBlas.deviceAddress;
-	instances.push_back(instance);
+	if (!scene.vertices.empty())
+	{
+		instance.instanceCustomIndex = 0;
+		instance.instanceShaderBindingTableRecordOffset = 0;
+		instance.accelerationStructureReference = trianglesBlas.deviceAddress;
+		instances.push_back(instance);
+	}
 
 	if (!scene.spheres.empty())
 	{
@@ -1232,10 +1454,16 @@ void VulkanRaytracer::createDescriptorSets()
 	std::vector<VkWriteDescriptorSet> writeDescriptorSets = {
 	accelerationStructureWrite,
 		vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, descriptorSetBindings["resultImage"], &storageImageDescriptor),
-		vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptorSetBindings["uniformBuffer"], &uboData.descriptor),
-		vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorSetBindings["vertexBuffer"], &vertexBufferDescriptor),
-		vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorSetBindings["indexBuffer"], &indexBufferDescriptor)
+		vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptorSetBindings["uniformBuffer"], &uboData.descriptor)
 	};
+
+	if (!scene.vertices.empty())
+	{
+		writeDescriptorSets.push_back(vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			descriptorSetBindings["vertexBuffer"], &vertexBufferDescriptor));
+		writeDescriptorSets.push_back(vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			descriptorSetBindings["indexBuffer"], &indexBufferDescriptor));
+	}
 
 	if (!scene.spheres.empty())
 	{
@@ -1372,7 +1600,7 @@ void VulkanRaytracer::createRayTracingPipeline()
 	shaderGroups.push_back(missShaderGroup);
 
 	// Closest hit group
-	if (scene.integratorName == "raytracing")
+	if (scene.integratorName == "raytracer")
 	{
 		shaderStages.push_back(loadShader("shaders/closesthit.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR));
 	}
@@ -1390,7 +1618,7 @@ void VulkanRaytracer::createRayTracingPipeline()
 	shaderGroups.push_back(closestHitShaderGroup);
 
 	// Intersection hit group (Closest hit + Intersection(procedural))
-	if (scene.integratorName == "raytracing")
+	if (scene.integratorName == "raytracer")
 	{
 		shaderStages.push_back(loadShader("shaders/closesthit_spheres.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR));
 	}
@@ -1655,4 +1883,7 @@ void VulkanRaytracer::keyCallback(GLFWwindow* window, int key, int scancode, int
 
 	else if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);
+
+	else if (key == GLFW_KEY_F1 && action == GLFW_RELEASE)
+		app->saveScreenshot(app->scene.screenshotName);
 }

@@ -16,31 +16,40 @@ float hitSphere(const Sphere s, const Ray r)
 	float b = 2.0 * dot(oc, r.direction);
 	float c = dot(oc, oc) - s.radius * s.radius;
 	float discriminant = b * b - 4 * a * c;
-	if(discriminant < 0)
+	if (discriminant < 0.0)
 	{
 		return -1.0;
 	}
+
+	float numerator = -b - sqrt(discriminant);
+	if (numerator > 0.0)
+	{
+		return numerator / (2.0 * a);
+	}
+	numerator = -b + sqrt(discriminant);
+	if (numerator > 0.0)
+	{
+		return numerator / (2.0 * a);
+	}
 	else
 	{
-		return (-b - sqrt(discriminant)) / (2.0 * a);
+		return -1.0;
 	}
 }
 
 void main()
 {
 	Sphere s = spheres.s[gl_PrimitiveID];
-	Ray ray, rayTransf;
-	ray.origin    = gl_WorldRayOriginEXT;
-	ray.direction = normalize(gl_WorldRayDirectionEXT);
-	rayTransf.origin    = (s.invertedTransform * vec4(ray.origin, 1.0f)).xyz;;
-	rayTransf.direction = (normalize(s.invertedTransform * vec4(ray.direction, 0.0f))).xyz;
+	Ray rayTransf;
+	rayTransf.origin = (s.invertedTransform * vec4(gl_WorldRayOriginEXT, 1.0f)).xyz;
+	rayTransf.direction = (normalize(s.invertedTransform * vec4(gl_WorldRayDirectionEXT, 0.0f))).xyz;
 
 	float tHit = hitSphere(s, rayTransf);
-	if(tHit > 0)
+	if (tHit > 0.0)
 	{
 		vec3 intersectionPointTransf = rayTransf.origin + tHit * rayTransf.direction;
 		vec3 intersectionPoint = (s.transform * vec4(intersectionPointTransf, 1.0f)).xyz;
-		tHit = length(intersectionPoint - ray.origin);
+		tHit = length(intersectionPoint - gl_WorldRayOriginEXT);
 		reportIntersectionEXT(tHit, 0);
 	}
 }

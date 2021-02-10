@@ -27,10 +27,15 @@ set(GLFW_BUILD_DOCS OFF)
 set(GLFW_BUILD_TESTS OFF)
 add_subdirectory(${GLFW_DIR})
 
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${GLFW_DIR}/include Vulkan::Vulkan ${GLM_INCLUDE_DIR})
+set(FREEIMAGE_INCLUDE_DIRS "FreeImage")
+set(FREEIMAGE_LIBRARIES "FreeImage")
 
-target_link_libraries(${PROJECT_NAME} PUBLIC glfw ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARIES} Vulkan::Vulkan)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${GLFW_DIR}/include Vulkan::Vulkan ${GLM_INCLUDE_DIR} ${FREEIMAGE_INCLUDE_DIRS})
+
+target_link_directories(${PROJECT_NAME} PUBLIC "FreeImage")
+
+target_link_libraries(${PROJECT_NAME} PUBLIC glfw ${OPENGL_gl_LIBRARY} ${FREEIMAGE_LIBRARIES} Vulkan::Vulkan)
 
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
 

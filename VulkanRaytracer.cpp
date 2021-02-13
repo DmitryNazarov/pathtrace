@@ -312,7 +312,7 @@ VulkanRaytracer::VulkanRaytracer(const std::vector<std::string>& args)
 	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\scene5.test";
 	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\scene6.test";
 	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\scene7.test";
-	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\analytic.test";
+	scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\analytic.test";
 
 	std::cout << scenePath << std::endl;
 	scene.loadScene(scenePath);
@@ -852,16 +852,6 @@ void VulkanRaytracer::saveScreenshot(const std::string& filename)
 	vkMapMemory(device, dstImageMemory, 0, VK_WHOLE_SIZE, 0, &data);
 	auto* byteData = static_cast<uint8_t*>(data);
 	byteData += subResourceLayout.offset;
-
-	// If source is BGR (destination is always RGB) and we can't use blit (which does automatic conversion), we'll have to manually swizzle color components
-	bool colorSwizzle = false;
-	// Check if source is BGR
-	if (!supportsBlit)
-	{
-		std::vector<VkFormat> formatsBGR = { VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_B8G8R8A8_SNORM };
-		colorSwizzle = (std::find(formatsBGR.begin(), formatsBGR.end(), swapChain.colorFormat) != formatsBGR.end());
-	}
-
 	std::vector<uint8_t> buffer;
 	buffer.resize(height * width * 3, 0);
 

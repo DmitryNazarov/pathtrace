@@ -18,17 +18,17 @@ layout(constant_id = 0) const int MAX_RECURSION = 0;
 
 void main()
 {
-	const vec2 pixelCenter = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
-	const vec2 inUV = pixelCenter / vec2(gl_LaunchSizeEXT.xy);
-	vec2 d = vec2(inUV.x * 2.0 - 1.0, 1.0 - 2.0 * inUV.y);
+	const vec2 pixelCenter = gl_LaunchIDEXT.xy + vec2(0.5f);
+	const vec2 inUV = pixelCenter / gl_LaunchSizeEXT.xy;
+	vec2 d = vec2(inUV.x * 2.0f - 1.0f, 1.0f - 2.0f * inUV.y);
 
-	vec4 origin = ubo.viewInverse * vec4(0, 0, 0, 1);
-	vec4 target = ubo.projInverse * vec4(d.x, d.y, 1, 1);
-	vec4 direction = normalize(ubo.viewInverse * vec4(normalize(target.xyz / target.w), 0));
+	vec4 origin = ubo.viewInverse * vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	vec4 target = ubo.projInverse * vec4(d.x, d.y, 1.0f, 1.0f);
+	vec4 direction = normalize(ubo.viewInverse * vec4(normalize(target.xyz / target.w), 0.0f));
 
 	uint rayFlags = gl_RayFlagsOpaqueEXT;
-	float tmin = 0.001;
-	float tmax = 10000.0;
+	float tmin = 0.001f;
+	float tmax = 10000.0f;
 
 	vec3 color = vec3(0.0f);
 	vec3 attenuation = vec3(1.0f);
@@ -58,5 +58,9 @@ void main()
 		origin.xyz = rayPayload.intersectionPoint;
 	}
 
-	imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(color, 0.0));
+	// rounding for edx grade system
+	float r = int(floor(rayPayload.color.r * 256.0f)) / 256.0f;
+	float g = int(floor(rayPayload.color.g * 256.0f)) / 256.0f;
+	float b = int(floor(rayPayload.color.b * 256.0f)) / 256.0f;
+	imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(r, g, b, 0.0f));
 }

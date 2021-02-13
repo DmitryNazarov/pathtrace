@@ -84,22 +84,25 @@ vec4 computeShading(vec3 point, vec3 eye, vec3 normal, Material m)
 		}
 	}
 
-	for (int i = 0; i < ubo.quadLightsNum; ++i)
+	if (m.emission == vec4(0))
 	{
-		vec3 v0 = quadLights.q[i].pos;
-		vec3 v1 = quadLights.q[i].pos + quadLights.q[i].abSide;
-		vec3 v2 = quadLights.q[i].pos + quadLights.q[i].abSide + quadLights.q[i].acSide;
-		vec3 v3 = quadLights.q[i].pos + quadLights.q[i].acSide;
-		float theta0 = acos(dot(normalize(v0 - point), normalize(v1 - point)));
-		vec3 gamma0 = normalize(cross(v0 - point, v1 - point));
-		float theta1 = acos(dot(normalize(v1 - point), normalize(v2 - point)));
-		vec3 gamma1 = normalize(cross(v1 - point, v2 - point));
-		float theta2 = acos(dot(normalize(v2 - point), normalize(v3 - point)));
-		vec3 gamma2 = normalize(cross(v2 - point, v3 - point));
-		float theta3 = acos(dot(normalize(v3 - point), normalize(v0 - point)));
-		vec3 gamma3 = normalize(cross(v3 - point, v0 - point));
-		vec3 F = (theta0 * gamma0 + theta1 * gamma1 + theta2 * gamma2 + theta3 * gamma3) / 2;
-		finalcolor += m.diffuse / PI * quadLights.q[i].color * dot(F, normal);
+		for (int i = 0; i < ubo.quadLightsNum; ++i)
+		{
+			vec3 v0 = quadLights.q[i].pos;
+			vec3 v1 = quadLights.q[i].pos + quadLights.q[i].abSide;
+			vec3 v2 = quadLights.q[i].pos + quadLights.q[i].abSide + quadLights.q[i].acSide;
+			vec3 v3 = quadLights.q[i].pos + quadLights.q[i].acSide;
+			float theta0 = acos(dot(normalize(v0 - point), normalize(v1 - point)));
+			vec3 gamma0 = normalize(cross(v0 - point, v1 - point));
+			float theta1 = acos(dot(normalize(v1 - point), normalize(v2 - point)));
+			vec3 gamma1 = normalize(cross(v1 - point, v2 - point));
+			float theta2 = acos(dot(normalize(v2 - point), normalize(v3 - point)));
+			vec3 gamma2 = normalize(cross(v2 - point, v3 - point));
+			float theta3 = acos(dot(normalize(v3 - point), normalize(v0 - point)));
+			vec3 gamma3 = normalize(cross(v3 - point, v0 - point));
+			vec3 F = (theta0 * gamma0 + theta1 * gamma1 + theta2 * gamma2 + theta3 * gamma3) / 2.0;
+			finalcolor += m.diffuse / PI * quadLights.q[i].color * dot(F, normal);
+		}
 	}
 
 	if (finalcolor.a > 1.0f)

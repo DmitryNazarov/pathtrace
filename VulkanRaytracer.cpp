@@ -312,12 +312,20 @@ VulkanRaytracer::VulkanRaytracer(const std::vector<std::string>& args)
 	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\scene5.test";
 	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\scene6.test";
 	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\scene7.test";
-	scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\analytic.test";
+	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\analytic.test";
+	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\sphere.test";
+	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\direct3x3.test";
+	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\direct9.test";
+	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\cornell.test";
+	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\dragon.test";
 
 	std::cout << scenePath << std::endl;
 	scene.loadScene(scenePath);
 	height = scene.height;
 	width = scene.width;
+
+	//!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	scene.depth = 1;  // for direct light shading turn it off
 
 	camera.setPerspective(scene.fovy, (float)width / (float)height, 0.1f, 512.0f);
 	camera.setLookAt(scene.eyeInit, scene.center, scene.upInit);
@@ -1598,6 +1606,10 @@ void VulkanRaytracer::createRayTracingPipeline()
 	{
 		shaderStages.push_back(loadShader("shaders/closesthit_analyticdirect.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR));
 	}
+	else if (scene.integratorName == "direct")
+	{
+		shaderStages.push_back(loadShader("shaders/closesthit_direct.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR));
+	}
 	VkRayTracingShaderGroupCreateInfoKHR closestHitShaderGroup{};
 	closestHitShaderGroup.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
 	closestHitShaderGroup.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
@@ -1615,6 +1627,10 @@ void VulkanRaytracer::createRayTracingPipeline()
 	else if (scene.integratorName == "analyticdirect")
 	{
 		shaderStages.push_back(loadShader("shaders/closesthit_spheres_analyticdirect.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR));
+	}
+	else if (scene.integratorName == "direct")
+	{
+		shaderStages.push_back(loadShader("shaders/closesthit_spheres_direct.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR));
 	}
 	VkRayTracingShaderGroupCreateInfoKHR intersecShaderGroup{};
 	intersecShaderGroup.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
@@ -1776,6 +1792,8 @@ void VulkanRaytracer::updateUniformBuffers()
 	uniformData.pointLightsNum = scene.pointLights.size();
 	uniformData.directLightsNum = scene.directLights.size();
 	uniformData.quadLightsNum = scene.quadLights.size();
+	uniformData.lightsamples = scene.lightsamples;
+	uniformData.lightstratify = scene.lightstratify;
 	memcpy(uboData.mapped, &uniformData, sizeof(uniformData));
 }
 

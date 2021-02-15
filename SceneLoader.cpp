@@ -63,10 +63,10 @@ void Scene::loadScene(const std::string& filename)
   std::vector<std::pair<vec3, vec3>> vertexNormals;
 
   vec4 ambient{ 0.0f, 0.0f, 0.0f, 1.0f }; // no ambient for direct light
-  vec4 diffuse{ 0.0f, 0.0f, 0.0f, 0.0f };
-  vec4 specular{ 0.0f, 0.0f, 0.0f, 0.0f };
-  vec4 emission{ 0.0f, 0.0f, 0.0f, 0.0f };
-  float shininess = .0;
+  vec4 diffuse{ 0.0f, 0.0f, 0.0f, 1.0f };
+  vec4 specular{ 0.0f, 0.0f, 0.0f, 1.0f };
+  vec4 emission{ 0.0f, 0.0f, 0.0f, 1.0f };
+  float shininess = 1.0f;
   vec3 attenuation{ 1.0f, 0.0f, 0.0f };
 
   std::string str, cmd;
@@ -252,14 +252,14 @@ void Scene::loadScene(const std::string& filename)
         auto abSide = transfstack.top() * vec4(values[3], values[4], values[5], 1.0f);
         auto acSide = transfstack.top() * vec4(values[6], values[7], values[8], 1.0f);
         auto color = vec4(values[9], values[10], values[11], 1.0f);
-        quadLights.emplace_back(pos, abSide, acSide, color);
-
-        // add 2 triangles to visualize quad light
         vec3 pos0 = pos;
         vec3 pos1 = pos + abSide;
         vec3 pos2 = pos + abSide + acSide;
         vec3 pos3 = pos + acSide;
         vec3 normal = normalize(cross(pos1 - pos0, pos2 - pos0));
+        quadLights.emplace_back(pos, abSide, acSide, normal, color);
+
+        // add 2 triangles to visualize quad light
         uint32_t index0 = addToVertices(vertices, Vertex(pos0, normal));
         uint32_t index1 = addToVertices(vertices, Vertex(pos1, normal));
         uint32_t index2 = addToVertices(vertices, Vertex(pos2, normal));
@@ -279,6 +279,21 @@ void Scene::loadScene(const std::string& filename)
       std::string value;
       if (readvals(ss, 1, &value)) {
         integratorName = value;
+      }
+    }
+    else if (cmd == "lightsamples")  // lightsamples <#samples>
+    {
+      int value;
+      if (readvals(ss, 1, &value)) {
+        lightsamples = value;
+      }
+    }
+    else if (cmd == "lightstratify")  // lightstratify <on/off>
+    {
+      std::string value;
+      if (readvals(ss, 1, &value)) {
+        if (value == "on")
+          lightstratify = true;
       }
     }
     else {

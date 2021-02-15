@@ -15,6 +15,8 @@ layout(binding = 2, set = 0) uniform UBO
 	uint pointLightsNum;
 	uint directLightsNum;
 	uint quadLightsNum;
+	uint lightsamples;
+	uint lightstratify;
 } ubo;
 layout(binding = 5, set = 0) buffer Spheres { Sphere s[]; } spheres;
 layout(binding = 6, set = 0) buffer PointLights { PointLight l[]; } pointLights;

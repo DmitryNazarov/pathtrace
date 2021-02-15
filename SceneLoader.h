@@ -22,13 +22,15 @@ class Scene
 public:
   size_t width = 640, height = 480;
   float aspect;
-  uint32_t depth = 1; //5; default 5 but for direct light shading turn off
+  uint32_t depth = 5;
   std::string screenshotName = "screenshot.png";
   vec3 eyeInit;
   vec3 center;
   vec3 upInit;
   float fovy = 90;
   std::string integratorName = "raytracer";
+  int lightsamples = 1;
+  bool lightstratify = false;
 
   std::vector<DirectionLight> directLights;
   std::vector<PointLight> pointLights;

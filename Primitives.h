@@ -69,11 +69,11 @@ struct PointLight {
 };
 
 struct QuadLight {
-  QuadLight(const vec3& pos, const vec3& abSide, const vec3& acSide, const vec4& color) :
-    pos(pos), abSide(abSide), acSide(acSide), color(color)
+  QuadLight(const vec3& pos, const vec3& abSide, const vec3& acSide, const vec3& normal, const vec4& color) :
+    pos(pos), abSide(abSide), acSide(acSide), normal(normal), color(color)
   {}
 
-  alignas(16) vec3 pos, abSide, acSide;
+  alignas(16) vec3 pos, abSide, acSide, normal;
   alignas(16) vec4 color;
 };
 

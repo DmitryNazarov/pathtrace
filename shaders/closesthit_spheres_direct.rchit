@@ -19,15 +19,16 @@ layout(binding = 2, set = 0) uniform UBO
 	uint lightsamples;
 	uint lightstratify;
 } ubo;
-layout(binding = 3, set = 0) buffer Vertices { Vertex v[]; } vertices;
-layout(binding = 4, set = 0) buffer Indices { uint i[]; } indices;
+layout(binding = 5, set = 0) buffer Spheres { Sphere s[]; } spheres;
 layout(binding = 6, set = 0) buffer PointLights { PointLight l[]; } pointLights;
 layout(binding = 7, set = 0) buffer DirectLights { DirectionLight l[]; } directLights;
-layout(binding = 8, set = 0) buffer TriangleMaterials { Material m[]; } triangleMaterials;
+layout(binding = 9, set = 0) buffer SphereMaterials { Material m[]; } sphereMaterials;
 layout(binding = 10, set = 0) buffer QuadLights { QuadLight q[]; } quadLights;
 
 
-void traceRay(vec3 origin, vec3 dir, float dist)
+uint rngState = gl_LaunchSizeEXT.x * gl_LaunchIDEXT.y + gl_LaunchIDEXT.x;  // Initial seed
+
+void traceShadowRay(vec3 origin, vec3 dir, float dist)
 {
 	uint flags = gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT;
 	traceRayEXT(topLevelAS,  // acceleration structure
@@ -37,27 +38,40 @@ void traceRay(vec3 origin, vec3 dir, float dist)
 				0,           // sbtRecordStride
 				1,           // missIndex
 				origin,      // ray origin
-				0.001,       // ray min range
+				EPS,         // ray min range
 				dir,         // ray direction
-				dist,        // ray max range
+				dist - EPS,  // ray max range
 				1            // payload (location = 1)
 	);
 }
 
-vec4 computeShading(vec3 point, vec3 eye, vec3 normal, Material m)
+vec3 getLightPos(QuadLight q, int s, int gridWidth)
+{
+	float u1 = stepAndOutputRNGFloat(rngState);
+	float u2 = stepAndOutputRNGFloat(rngState);
+	if (ubo.lightstratify != 0)
+	{
+		int j = s / gridWidth;
+		int k = s % gridWidth;
+		u1 = (u1 + k) / gridWidth;
+		u2 = (u2 + j) / gridWidth;
+	}
+	return q.pos + u1 * q.abSide + u2 * q.acSide;
+}
+
+vec4 computeShading(vec3 point, vec3 eyedir, vec3 normal, Material m)
 {
 	vec4 finalcolor = m.ambient + m.emission;
 	vec3 direction, halfvec;
-	vec3 eyedirn = normalize(eye - point);
 
 	for (int i = 0; i < ubo.directLightsNum; ++i)
 	{
 		direction = normalize(directLights.l[i].dir);
 		isShadowed = true;
-		traceRay(point, direction, 10000.0f);
+		traceShadowRay(point, direction, 10000.0f);
 		if (!isShadowed)
 		{
-			halfvec = normalize(direction + eyedirn);
+			halfvec = normalize(direction + eyedir);
 			finalcolor += computeLight(direction, directLights.l[i].color, normal, halfvec, m.diffuse,
 				m.specular, m.shininess);
 		}
@@ -72,12 +86,12 @@ vec4 computeShading(vec3 point, vec3 eye, vec3 normal, Material m)
 		isShadowed = true;
 		if (dot(normal, direction) > 0)
 		{
-			traceRay(point, direction, dist);
+			traceShadowRay(point, direction, dist);
 		}
 
 		if (!isShadowed)
 		{
-			halfvec = normalize(direction + eyedirn);
+			halfvec = normalize(direction + eyedir);
 			vec4 color = computeLight(direction, pointLights.l[i].color, normal, halfvec, m.diffuse,
 				m.specular, m.shininess);
 			float a = pointLights.l[i].attenuation.x + pointLights.l[i].attenuation.y * dist +
@@ -90,20 +104,36 @@ vec4 computeShading(vec3 point, vec3 eye, vec3 normal, Material m)
 	{
 		for (int i = 0; i < ubo.quadLightsNum; ++i)
 		{
-			vec3 v0 = quadLights.q[i].pos;
-			vec3 v1 = quadLights.q[i].pos + quadLights.q[i].abSide;
-			vec3 v2 = quadLights.q[i].pos + quadLights.q[i].abSide + quadLights.q[i].acSide;
-			vec3 v3 = quadLights.q[i].pos + quadLights.q[i].acSide;
-			float theta0 = acos(dot(normalize(v0 - point), normalize(v1 - point)));
-			vec3 gamma0 = normalize(cross(v0 - point, v1 - point));
-			float theta1 = acos(dot(normalize(v1 - point), normalize(v2 - point)));
-			vec3 gamma1 = normalize(cross(v1 - point, v2 - point));
-			float theta2 = acos(dot(normalize(v2 - point), normalize(v3 - point)));
-			vec3 gamma2 = normalize(cross(v2 - point, v3 - point));
-			float theta3 = acos(dot(normalize(v3 - point), normalize(v0 - point)));
-			vec3 gamma3 = normalize(cross(v3 - point, v0 - point));
-			vec3 F = (theta0 * gamma0 + theta1 * gamma1 + theta2 * gamma2 + theta3 * gamma3) / 2.0;
-			finalcolor += m.diffuse / PI * quadLights.q[i].color * dot(F, normal);
+			vec4 color = vec4(0.0f);
+			float cosOfAngle = dot(normalize(quadLights.q[i].abSide), normalize(quadLights.q[i].acSide));
+			float sinOfAngle = sqrt(1 - cosOfAngle * cosOfAngle);
+			float area = length(quadLights.q[i].abSide) * length(quadLights.q[i].acSide) * sinOfAngle;
+			int stratifiedGridWidth = int(sqrt(ubo.lightsamples));
+			for (int s = 0; s < ubo.lightsamples; ++s)
+			{
+				vec3 lightpos = getLightPos(quadLights.q[i], s, stratifiedGridWidth);
+				vec3 lightdir = lightpos - point;
+				direction = normalize(lightdir);
+				float dist = length(lightdir);
+				isShadowed = true;
+				if (dot(normal, direction) > 0)
+				{
+					traceShadowRay(point, direction, dist);
+				}
+				if (isShadowed)
+				{
+					continue;
+				}
+
+				vec4 F = computeLight(direction, eyedir, normal, m.diffuse, m.specular, m.shininess);
+				float cosOmegaO = dot(quadLights.q[i].normal, direction);
+				// if (cosOmegaO < 0)
+				// 	cosOmegaO = dot(-quadLights.q[i].normal, direction);
+				float cosOmegaI = dot(normal, direction);
+				float geom = max(cosOmegaI, 0.0f) * max(cosOmegaO, 0.0f) / (dist * dist);
+				color += F * geom;
+			}
+			finalcolor += quadLights.q[i].color * color * area / ubo.lightsamples;
 		}
 	}
 
@@ -114,16 +144,15 @@ vec4 computeShading(vec3 point, vec3 eye, vec3 normal, Material m)
 
 void main()
 {
-	Vertex v0 = vertices.v[indices.i[3 * gl_PrimitiveID]];
-	Vertex v1 = vertices.v[indices.i[3 * gl_PrimitiveID + 1]];
-	Vertex v2 = vertices.v[indices.i[3 * gl_PrimitiveID + 2]];
+	Sphere s = spheres.s[gl_PrimitiveID];
 
-	// Interpolate normal
-	const vec3 barycentricCoords = vec3(1.0f - attribs.x - attribs.y, attribs.x, attribs.y);
-	vec3 normal = normalize(v0.normal * barycentricCoords.x + v1.normal * barycentricCoords.y + v2.normal * barycentricCoords.z);
-	Material mat = triangleMaterials.m[gl_PrimitiveID];
 	vec3 intersectionPoint = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
-	vec4 finalColor = computeShading(intersectionPoint, gl_WorldRayOriginEXT, normal, mat);
+	vec3 intersectionPointTransf = (s.invertedTransform * vec4(intersectionPoint, 1.0f)).xyz;
+	vec3 normal = normalize(mat3(transpose(s.invertedTransform)) * vec3(intersectionPointTransf - s.pos));
+
+	Material mat = sphereMaterials.m[gl_PrimitiveID];
+
+	vec4 finalColor = computeShading(intersectionPoint, -gl_WorldRayDirectionEXT, normal, mat);
 
 	rayPayload.color = finalColor.rgb;
 	rayPayload.intersectionPoint = intersectionPoint;

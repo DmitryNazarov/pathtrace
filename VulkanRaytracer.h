@@ -256,6 +256,8 @@ private:
 		uint32_t pointLightsNum;
 		uint32_t directLightsNum;
 		uint32_t quadLightsNum;
+		uint32_t lightsamples;
+		uint32_t lightstratify;
 	} uniformData;
 	vks::Buffer uboData;
 

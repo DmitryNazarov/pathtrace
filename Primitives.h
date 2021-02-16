@@ -33,12 +33,12 @@ struct Vertex
   {}
   glm::vec3 pos;
   alignas(16) glm::vec3 normal;
-
-  bool operator==(const Vertex& other_v)
-  {
-    return pos == other_v.pos && normal == other_v.normal;
-  }
 };
+
+constexpr bool operator==(const Vertex& lhs, const Vertex& rhs)
+{
+  return lhs.pos == rhs.pos && lhs.normal == rhs.normal;
+}
 
 struct Sphere {
   vec3 pos;

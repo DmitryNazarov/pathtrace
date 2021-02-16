@@ -4,15 +4,17 @@
 #include <SceneLoader.h>
 
 
-uint32_t addToVertices(std::vector<Vertex>& vertices, const Vertex& v)
+uint32_t Scene::addToVertices(const Vertex& v)
 {
-  auto it = std::find(vertices.begin(), vertices.end(), v);
-  if (it != vertices.end())
+  auto [it, isInserted] = verticesMap.insert({ v, nullptr });
+  if (isInserted)
   {
-    return std::distance(vertices.begin(), it);
+    vertices.push_back(v);
+    it->second = &vertices[vertices.size() - 1];
+    return vertices.size() - 1;
   }
-  vertices.push_back(v);
-  return vertices.size() - 1;
+
+  return it->second - &vertices[0];
 }
 
 Aabb calcAabb(const Sphere& s)
@@ -78,8 +80,7 @@ void Scene::loadScene(const std::string& filename)
   transfstack.push(mat4(1.0)); // identity
 
   while (getline(in, str)) {
-    if ((str.find_first_not_of(" \t\r\n") == std::string::npos) ||
-      (str[0] == '#'))
+    if ((str.find_first_not_of(" \t\r\n") == std::string::npos) || (str[0] == '#'))
       continue;
 
     std::stringstream ss(str);
@@ -178,9 +179,9 @@ void Scene::loadScene(const std::string& filename)
         vec3 pos1 = transfstack.top() * vec4(sceneVertices[values[1]], 1.0f);
         vec3 pos2 = transfstack.top() * vec4(sceneVertices[values[2]], 1.0f);
         vec3 normal = normalize(cross(pos1 - pos0, pos2 - pos0));
-        uint32_t index0 = addToVertices(vertices, Vertex(pos0, normal));
-        uint32_t index1 = addToVertices(vertices, Vertex(pos1, normal));
-        uint32_t index2 = addToVertices(vertices, Vertex(pos2, normal));
+        uint32_t index0 = addToVertices(Vertex(pos0, normal));
+        uint32_t index1 = addToVertices(Vertex(pos1, normal));
+        uint32_t index2 = addToVertices(Vertex(pos2, normal));
         indices.push_back(index0);
         indices.push_back(index1);
         indices.push_back(index2);
@@ -260,10 +261,10 @@ void Scene::loadScene(const std::string& filename)
         quadLights.emplace_back(pos, abSide, acSide, normal, color);
 
         // add 2 triangles to visualize quad light
-        uint32_t index0 = addToVertices(vertices, Vertex(pos0, normal));
-        uint32_t index1 = addToVertices(vertices, Vertex(pos1, normal));
-        uint32_t index2 = addToVertices(vertices, Vertex(pos2, normal));
-        uint32_t index3 = addToVertices(vertices, Vertex(pos3, normal));
+        uint32_t index0 = addToVertices(Vertex(pos0, normal));
+        uint32_t index1 = addToVertices(Vertex(pos1, normal));
+        uint32_t index2 = addToVertices(Vertex(pos2, normal));
+        uint32_t index3 = addToVertices(Vertex(pos3, normal));
         indices.push_back(index0);
         indices.push_back(index1);
         indices.push_back(index2);

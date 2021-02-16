@@ -2,6 +2,7 @@
 #include <stack>
 #include <sstream>
 #include <fstream>
+#include <unordered_map>
 
 #include "vulkan/vulkan.h"
 
@@ -15,6 +16,32 @@ struct BufferDedicated
 {
   VkBuffer buffer = VK_NULL_HANDLE;
   VkDeviceMemory memory = VK_NULL_HANDLE;
+};
+
+template <class T>
+inline void hash_combine(std::size_t& s, const T& v)
+{
+  std::hash<T> h;
+  s ^= h(v) + 0x9e3779b9 + (s << 6) + (s >> 2);
+}
+
+template <class T>
+class VertexHash;
+
+template<>
+struct VertexHash<Vertex>
+{
+  std::size_t operator()(const Vertex& v) const
+  {
+    std::size_t res = 0;
+    hash_combine(res, v.pos.x);
+    hash_combine(res, v.pos.y);
+    hash_combine(res, v.pos.z);
+    hash_combine(res, v.normal.x);
+    hash_combine(res, v.normal.y);
+    hash_combine(res, v.normal.z);
+    return res;
+  }
 };
 
 class Scene
@@ -59,10 +86,12 @@ private:
     void* data_,
     VkBufferUsageFlags     usage_,
     VkMemoryPropertyFlags  memProps = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+  uint32_t addToVertices(const Vertex& v);
 
 private:
   VulkanDebug vkDebug;
   std::vector<BufferDedicated> m_stagingBuffers;
+  std::unordered_map<Vertex, Vertex*,VertexHash<Vertex>> verticesMap;
 };
 
 template <typename T>

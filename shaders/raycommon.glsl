@@ -109,6 +109,39 @@ float stepAndOutputRNGFloat(inout uint rngState)
 vec4 computeLight(vec3 direction, vec3 eyedir, vec3 normal, vec4 diffuse, vec4 specular, float shininess)
 {
 	vec4 lambert = diffuse / PI;
+	//vec4 phong = specular * (shininess + 2) / (2 * PI) * pow(max(dot(reflect(-eyedir, normal), direction), 0.0f), shininess);
 	vec4 phong = specular * (shininess + 2) / (2 * PI) * pow(max(dot(reflect(-eyedir, normal), direction), 0.0f), shininess);
 	return lambert + phong;
+}
+
+
+
+// rand functions taken from neo java lib and
+// https://github.com/nvpro-samples/optix_advanced_samples
+const uint LCG_A = 1664525u;
+const uint LCG_C = 1013904223u;
+const int MAX_RAND = 0x7fff;
+const int IEEE_ONE = 0x3f800000;
+const int IEEE_MASK = 0x007fffff;
+
+uint Tea(uint val0, uint val1) {
+  uint v0 = val0;
+  uint v1 = val1;
+  uint s0 = 0;
+  for (uint n = 0; n < 16; n++) {
+    s0 += 0x9e3779b9;
+    v0 += ((v1<<4)+0xa341316c)^(v1+s0)^((v1>>5)+0xc8013ea4);
+    v1 += ((v0<<4)+0xad90777d)^(v0+s0)^((v0>>5)+0x7e95761e);
+  }
+  return v0;
+}
+
+uint Rand(inout uint seed) { // random integer in the range [0, MAX_RAND]
+  seed = 69069 * seed + 1;
+  return ((seed = 69069 * seed + 1) & MAX_RAND);
+}
+
+float Randf01(inout uint seed) { // random number in the range [0.0f, 1.0f]
+  seed = (LCG_A * seed + LCG_C);
+  return float(seed & 0x00FFFFFF) / float(0x01000000u);
 }

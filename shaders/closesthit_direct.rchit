@@ -48,8 +48,13 @@ void traceShadowRay(vec3 origin, vec3 dir, float dist)
 
 vec3 getLightPos(QuadLight q, int s, int gridWidth)
 {
+	//uint seed = Tea(Tea(gl_LaunchSizeEXT.x, gl_LaunchIDEXT.y), gridWidth * gridWidth);
+	//float u1 = Randf01(seed);
+	//float u2 = Randf01(seed);
 	float u1 = stepAndOutputRNGFloat(rngState);
 	float u2 = stepAndOutputRNGFloat(rngState);
+	//if (abs(u1 - 1.f) < EPS) u1 = 1.0f - 2 * EPS;
+	//if (abs(u2 - 1.f) < EPS) u2 = 1.0f - 2 * EPS;
 	if (ubo.lightstratify != 0)
 	{
 		int j = s / gridWidth;
@@ -62,6 +67,8 @@ vec3 getLightPos(QuadLight q, int s, int gridWidth)
 
 vec4 computeShading(vec3 point, vec3 eyedir, vec3 normal, Material m)
 {
+	//return vec4(1.f);
+
 	vec4 finalcolor = m.ambient + m.emission;
 	vec3 direction, halfvec;
 
@@ -105,7 +112,7 @@ vec4 computeShading(vec3 point, vec3 eyedir, vec3 normal, Material m)
 	{
 		for (int i = 0; i < ubo.quadLightsNum; ++i)
 		{
-			vec4 color = vec4(0.0f);
+			vec4 irradiance = vec4(0.0f);
 			float cosOfAngle = dot(normalize(quadLights.q[i].abSide), normalize(quadLights.q[i].acSide));
 			float sinOfAngle = sqrt(1 - cosOfAngle * cosOfAngle);
 			float area = length(quadLights.q[i].abSide) * length(quadLights.q[i].acSide) * sinOfAngle;
@@ -126,23 +133,24 @@ vec4 computeShading(vec3 point, vec3 eyedir, vec3 normal, Material m)
 					continue;
 				}
 
-				vec4 F = computeLight(direction, eyedir, normal, m.diffuse, m.specular, m.shininess);
+				vec4 reflectance = computeLight(direction, eyedir, normal, m.diffuse, m.specular, m.shininess);
 				float cosOmegaO = dot(quadLights.q[i].normal, direction);
-				//if (cosOmegaO < 0)
-				//	cosOmegaO = dot(-quadLights.q[i].normal, direction);
 				float cosOmegaI = dot(normal, direction);
 				float geom = max(cosOmegaI, 0.0f) * max(cosOmegaO, 0.0f) / (dist * dist);
-				color += F * geom;
+				irradiance += reflectance * geom;
 				// if (gl_LaunchIDEXT.x == 292 && gl_LaunchIDEXT.y == 366)
 				// {
 				// 	//if (abs(color.r) > EPS && abs(color.g) > EPS && abs(color.b) > EPS)
-				// 	//if (abs(cosOmegaO) < EPS)
-				// 		finalcolor = vec4(1, 0, 0, 0);
+				// 	if (cosOmegaO < EPS)
+				// 		color = vec4(1, 0, 0, 0);
 				// 	//else
-				// 	//	finalcolor = vec4(0, 1, 0, 0);
+				// 		//finalcolor = vec4(0, 1, 0, 0);
 				// }
+
+				// if (cosOmegaO < EPS)
+				// 	irradiance = vec4(1, 0, 0, 0);
 			}
-			finalcolor += quadLights.q[i].color * color * area / ubo.lightsamples;
+			finalcolor += quadLights.q[i].color * irradiance * area / ubo.lightsamples;
 		}
 	}
 

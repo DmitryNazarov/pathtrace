@@ -104,7 +104,7 @@ vec4 computeShading(vec3 point, vec3 eyedir, vec3 normal, Material m)
 	{
 		for (int i = 0; i < ubo.quadLightsNum; ++i)
 		{
-			vec4 color = vec4(0.0f);
+			vec4 irradiance = vec4(0.0f);
 			float cosOfAngle = dot(normalize(quadLights.q[i].abSide), normalize(quadLights.q[i].acSide));
 			float sinOfAngle = sqrt(1 - cosOfAngle * cosOfAngle);
 			float area = length(quadLights.q[i].abSide) * length(quadLights.q[i].acSide) * sinOfAngle;
@@ -125,15 +125,13 @@ vec4 computeShading(vec3 point, vec3 eyedir, vec3 normal, Material m)
 					continue;
 				}
 
-				vec4 F = computeLight(direction, eyedir, normal, m.diffuse, m.specular, m.shininess);
+				vec4 reflectance = computeLight(direction, eyedir, normal, m.diffuse, m.specular, m.shininess);
 				float cosOmegaO = dot(quadLights.q[i].normal, direction);
-				// if (cosOmegaO < 0)
-				// 	cosOmegaO = dot(-quadLights.q[i].normal, direction);
 				float cosOmegaI = dot(normal, direction);
 				float geom = max(cosOmegaI, 0.0f) * max(cosOmegaO, 0.0f) / (dist * dist);
-				color += F * geom;
+				irradiance += reflectance * geom;
 			}
-			finalcolor += quadLights.q[i].color * color * area / ubo.lightsamples;
+			finalcolor += quadLights.q[i].color * irradiance * area / ubo.lightsamples;
 		}
 	}
 

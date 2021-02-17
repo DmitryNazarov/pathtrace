@@ -6,15 +6,15 @@
 
 uint32_t Scene::addToVertices(const Vertex& v)
 {
-  auto [it, isInserted] = verticesMap.insert({ v, nullptr });
+  auto [it, isInserted] = verticesMap.insert({ v, 0 });
   if (isInserted)
   {
     vertices.push_back(v);
-    it->second = &vertices[vertices.size() - 1];
+    it->second = vertices.size() - 1;
     return vertices.size() - 1;
   }
 
-  return it->second - &vertices[0];
+  return it->second;
 }
 
 Aabb calcAabb(const Sphere& s)

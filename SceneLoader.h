@@ -91,7 +91,7 @@ private:
 private:
   VulkanDebug vkDebug;
   std::vector<BufferDedicated> m_stagingBuffers;
-  std::unordered_map<Vertex, Vertex*,VertexHash<Vertex>> verticesMap;
+  std::unordered_map<Vertex, uint32_t, VertexHash<Vertex>> verticesMap;
 };
 
 template <typename T>

@@ -316,8 +316,8 @@ VulkanRaytracer::VulkanRaytracer(const std::vector<std::string>& args)
 	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\sphere.test";
 	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\direct3x3.test";
 	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\direct9.test";
-	scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\cornell.test";
-	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\dragon.test";
+	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\cornell.test";
+	scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\dragon.test";
 
 	std::cout << scenePath << std::endl;
 	scene.loadScene(scenePath);

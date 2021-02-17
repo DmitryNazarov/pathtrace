@@ -297,6 +297,14 @@ void Scene::loadScene(const std::string& filename)
           lightstratify = true;
       }
     }
+    else if (cmd == "spp")  // spp <#samples>
+    {
+      int value;
+      if (readvals(ss, 1, &value)) {
+        samplesPerPixel = value;
+      }
+    }
+
     else {
       std::cerr << "Unknown Command: " << cmd << " Skipping \n";
     }

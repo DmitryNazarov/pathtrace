@@ -318,6 +318,10 @@ VulkanRaytracer::VulkanRaytracer(const std::vector<std::string>& args)
 	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\direct9.test";
 	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\cornell.test";
 	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\dragon.test";
+	scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\homework3-submissionscenes\\cornellSimple.test";
+	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\homework3-submissionscenes\\cornellNEE.test";
+	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\homework3-submissionscenes\\cornellRR.test";
+	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\homework3-submissionscenes\\dragon.test";
 
 	std::cout << scenePath << std::endl;
 	scene.loadScene(scenePath);
@@ -1561,7 +1565,14 @@ void VulkanRaytracer::createRayTracingPipeline()
 	std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 
 	// Ray generation group
-	shaderStages.push_back(loadShader("shaders/raygen.rgen.spv", VK_SHADER_STAGE_RAYGEN_BIT_KHR));
+	if (scene.integratorName == "raytracer" || scene.integratorName == "analyticdirect" || scene.integratorName == "direct")
+	{
+		shaderStages.push_back(loadShader("shaders/raygen.rgen.spv", VK_SHADER_STAGE_RAYGEN_BIT_KHR));
+	}
+	else if (scene.integratorName == "pathtracer")
+	{
+		shaderStages.push_back(loadShader("shaders/raygen_pathtracer.rgen.spv", VK_SHADER_STAGE_RAYGEN_BIT_KHR));
+	}
 
 	VkSpecializationMapEntry specializationMapEntry{};
 	specializationMapEntry.constantID = 0;
@@ -1611,6 +1622,11 @@ void VulkanRaytracer::createRayTracingPipeline()
 	{
 		shaderStages.push_back(loadShader("shaders/closesthit_direct.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR));
 	}
+	else if (scene.integratorName == "pathtracer")
+	{
+		shaderStages.push_back(loadShader("shaders/closesthit_pathtracer.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR));
+	}
+
 	VkRayTracingShaderGroupCreateInfoKHR closestHitShaderGroup{};
 	closestHitShaderGroup.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
 	closestHitShaderGroup.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
@@ -1633,6 +1649,11 @@ void VulkanRaytracer::createRayTracingPipeline()
 	{
 		shaderStages.push_back(loadShader("shaders/closesthit_spheres_direct.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR));
 	}
+	else if (scene.integratorName == "pathtracer")
+	{
+		shaderStages.push_back(loadShader("shaders/closesthit_spheres_pathtracer.rchit.spv", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR));
+	}
+
 	VkRayTracingShaderGroupCreateInfoKHR intersecShaderGroup{};
 	intersecShaderGroup.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
 	intersecShaderGroup.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR;
@@ -1795,6 +1816,7 @@ void VulkanRaytracer::updateUniformBuffers()
 	uniformData.quadLightsNum = scene.quadLights.size();
 	uniformData.lightsamples = scene.lightsamples;
 	uniformData.lightstratify = scene.lightstratify;
+	uniformData.spp = scene.samplesPerPixel;
 	memcpy(uboData.mapped, &uniformData, sizeof(uniformData));
 }
 

@@ -49,6 +49,7 @@ struct QuadLight
 };
 
 const float PI = 3.1415926535897932384626433832795;
+const float TWO_PI = 6.283185307179586;
 const float EPS = 0.001;
 
 struct RayPayload
@@ -109,6 +110,16 @@ float stepAndOutputRNGFloat(inout uint rngState)
 vec4 computeLight(vec3 direction, vec3 eyedir, vec3 normal, vec4 diffuse, vec4 specular, float shininess)
 {
 	vec4 lambert = diffuse / PI;
-	vec4 phong = specular * (shininess + 2) / (2 * PI) * pow(max(dot(reflect(-eyedir, normal), direction), 0.0f), shininess);
+	vec4 phong = specular * (shininess + 2) / TWO_PI * pow(max(dot(reflect(-eyedir, normal), direction), 0.0f), shininess);
 	return lambert + phong;
+}
+
+vec3 CosineSampleHemisphere(float u1, float u2) {
+	vec3 dir;
+	float r = sqrt(u1);
+	float phi = TWO_PI * u2;
+	dir.x = r * cos(phi);
+	dir.y = r * sin(phi);
+	dir.z = sqrt(max(0.0, 1.0 - dir.x*dir.x - dir.y*dir.y));
+	return dir;
 }

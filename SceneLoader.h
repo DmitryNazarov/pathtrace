@@ -56,8 +56,9 @@ public:
   vec3 upInit;
   float fovy = 90;
   std::string integratorName = "raytracer";
-  int lightsamples = 1;
+  uint32_t lightsamples = 1;
   bool lightstratify = false;
+  uint32_t samplesPerPixel = 1;
 
   std::vector<DirectionLight> directLights;
   std::vector<PointLight> pointLights;

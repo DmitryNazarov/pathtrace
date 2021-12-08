@@ -32,8 +32,6 @@
 *.app
 
 build
-glm
-glfw
 .vs
 *.manifest
 *.ilk

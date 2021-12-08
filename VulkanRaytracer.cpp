@@ -1,6 +1,9 @@
 #include "VulkanRaytracer.h"
 
 
+const float NEAR_PLANE = 0.1f, FAR_PLANE = 512.0f;
+const char* validationLayerName = "VK_LAYER_KHRONOS_validation";
+
 VkResult VulkanRaytracer::createInstance()
 {
 	VkApplicationInfo appInfo = {};
@@ -24,7 +27,7 @@ VkResult VulkanRaytracer::createInstance()
 		std::vector<VkExtensionProperties> extensions(extCount);
 		if (vkEnumerateInstanceExtensionProperties(VK_NULL_HANDLE, &extCount, &extensions.front()) == VK_SUCCESS)
 		{
-			for (VkExtensionProperties extension : extensions)
+			for (VkExtensionProperties &extension : extensions)
 			{
 				supportedInstanceExtensions.push_back(extension.extensionName);
 			}
@@ -54,20 +57,18 @@ VkResult VulkanRaytracer::createInstance()
 	instanceCreateInfo.pApplicationInfo = &appInfo;
 	if (instanceExtensions.size() > 0)
 	{
-		instanceCreateInfo.enabledExtensionCount = (uint32_t)instanceExtensions.size();
+		instanceCreateInfo.enabledExtensionCount = static_cast<int32_t>(instanceExtensions.size());
 		instanceCreateInfo.ppEnabledExtensionNames = instanceExtensions.data();
 	}
 	if (settings.validation)
 	{
-		// The VK_LAYER_KHRONOS_validation contains all current validation functionality.
-		const char* validationLayerName = "VK_LAYER_KHRONOS_validation";
 		// Check if this layer is available at instance level
 		uint32_t instanceLayerCount;
 		vkEnumerateInstanceLayerProperties(&instanceLayerCount, VK_NULL_HANDLE);
 		std::vector<VkLayerProperties> instanceLayerProperties(instanceLayerCount);
 		vkEnumerateInstanceLayerProperties(&instanceLayerCount, instanceLayerProperties.data());
 		bool validationLayerPresent = false;
-		for (VkLayerProperties layer : instanceLayerProperties) {
+		for (VkLayerProperties &layer : instanceLayerProperties) {
 			if (strcmp(layer.layerName, validationLayerName) == 0) {
 				validationLayerPresent = true;
 				break;
@@ -97,8 +98,7 @@ void VulkanRaytracer::createCommandBuffers()
 	// Create one command buffer for each swap chain image and reuse for rendering
 	drawCmdBuffers.resize(swapChain.imageCount);
 
-	VkCommandBufferAllocateInfo cmdBufAllocateInfo =
-		vks::initializers::commandBufferAllocateInfo(
+	VkCommandBufferAllocateInfo cmdBufAllocateInfo = vks::initializers::commandBufferAllocateInfo(
 			cmdPool,
 			VK_COMMAND_BUFFER_LEVEL_PRIMARY,
 			static_cast<uint32_t>(drawCmdBuffers.size()));
@@ -161,7 +161,7 @@ void VulkanRaytracer::prepare()
 	vkCreateRayTracingPipelinesKHR = reinterpret_cast<PFN_vkCreateRayTracingPipelinesKHR>(vkGetDeviceProcAddr(device, "vkCreateRayTracingPipelinesKHR"));
 
 	// Create the acceleration structures used to render the ray traced scene
-	scene.loadVulkanBuffersForScene(vkDebug, vulkanDevice, queue);
+	scene.loadVulkanBuffersForScene(vkDebug, vulkanDevice.get(), queue);
 	createBottomLevelAccelerationStructureTriangles();
 	createBottomLevelAccelerationStructureSpheres();
 	createTopLevelAccelerationStructure();
@@ -196,7 +196,7 @@ void VulkanRaytracer::nextFrame()
 	}
 
 	render();
-	frameCounter++;
+	++frameCounter;
 	auto tEnd = std::chrono::high_resolution_clock::now();
 	auto tDiff = std::chrono::duration<double, std::milli>(tEnd - tStart).count();
 	frameTimer = (float)tDiff / 1000.0f;
@@ -214,7 +214,7 @@ void VulkanRaytracer::nextFrame()
 			timer -= 1.0f;
 		}
 	}
-	float fpsTimer = (float)(std::chrono::duration<double, std::milli>(tEnd - lastTimestamp).count());
+	float fpsTimer = static_cast<float>(std::chrono::duration<double, std::milli>(tEnd - lastTimestamp).count());
 	if (fpsTimer > 1000.0f)
 	{
 		lastFPS = static_cast<uint32_t>((float)frameCounter * (1000.0f / fpsTimer));
@@ -231,7 +231,6 @@ void VulkanRaytracer::renderLoop()
 	destWidth = width;
 	destHeight = height;
 	lastTimestamp = std::chrono::high_resolution_clock::now();
-
 
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
@@ -301,28 +300,6 @@ VulkanRaytracer::VulkanRaytracer(const std::vector<std::string>& args)
 		}
 	}
 
-	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\test_scene.test";
-	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\scene1.test";
-	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\scene2.test";
-	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\scene3.test";
-	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\scene4-ambient.test";
-	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\scene4-diffuse.test";
-	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\scene4-emission.test";
-	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\scene4-specular.test";
-	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\scene5.test";
-	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\scene6.test";
-	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\scene7.test";
-	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\analytic.test";
-	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\sphere.test";
-	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\direct3x3.test";
-	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\direct9.test";
-	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\cornell.test";
-	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\dragon.test";
-	scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\homework3-submissionscenes\\cornellSimple.test";
-	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\homework3-submissionscenes\\cornellNEE.test";
-	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\homework3-submissionscenes\\cornellRR.test";
-	//scenePath = "E:\\Programming\\edx_cse168\\hw2\\data\\homework3-submissionscenes\\dragon.test";
-
 	std::cout << scenePath << std::endl;
 	scene.loadScene(scenePath);
 
@@ -330,21 +307,10 @@ VulkanRaytracer::VulkanRaytracer(const std::vector<std::string>& args)
 	width = scene.width;
 
 	//!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	scene.depth = 1;  // for direct light shading turn it off
+	//scene.depth = 1;  // for direct light shading turn it off
 
-	camera.setPerspective(scene.fovy, (float)width / (float)height, 0.1f, 512.0f);
+	camera.setPerspective(scene.fovy, (float)width / (float)height, NEAR_PLANE, FAR_PLANE);
 	camera.setLookAt(scene.eyeInit, scene.center, scene.upInit);
-
-	// Enable instance and device extensions required to use VK_KHR_ray_tracing
-	enabledInstanceExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
-	enabledDeviceExtensions.push_back(VK_KHR_MAINTENANCE3_EXTENSION_NAME);
-	enabledDeviceExtensions.push_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
-	enabledDeviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
-	enabledDeviceExtensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
-	enabledDeviceExtensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
-	enabledDeviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
-	enabledDeviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
-	enabledDeviceExtensions.push_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
 }
 
 VulkanRaytracer::~VulkanRaytracer()
@@ -417,7 +383,7 @@ VulkanRaytracer::~VulkanRaytracer()
 		vkDestroyFence(device, fence, VK_NULL_HANDLE);
 	}
 
-	delete vulkanDevice;
+	vulkanDevice.reset();
 
 	if (settings.validation)
 	{
@@ -489,7 +455,7 @@ bool VulkanRaytracer::initAPIs()
 	// Vulkan device creation
 	// This is handled by a separate class that gets a logical device representation
 	// and encapsulates functions related to a device
-	vulkanDevice = new vks::VulkanDevice(physicalDevice);
+	vulkanDevice = std::make_unique<vks::VulkanDevice>(physicalDevice);
 	VkResult res = vulkanDevice->createLogicalDevice(enabledFeatures, enabledDeviceExtensions, deviceCreatepNextChain);
 	if (res != VK_SUCCESS) {
 		vks::tools::exitFatal("Could not create Vulkan device: \n" + vks::tools::errorString(res), res);
@@ -560,7 +526,6 @@ void VulkanRaytracer::createCommandPool()
 	VkCommandPoolCreateInfo cmdPoolInfo = {};
 	cmdPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	cmdPoolInfo.queueFamilyIndex = swapChain.queueNodeIndex;
-	//cmdPoolInfo.queueFamilyIndex = vulkanDevice->queueFamilyIndices.graphics;
 	cmdPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 	VK_CHECK_RESULT(vkCreateCommandPool(device, &cmdPoolInfo, VK_NULL_HANDLE, &cmdPool));
 }

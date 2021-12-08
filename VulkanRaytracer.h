@@ -169,8 +169,15 @@ private:
 	/** @brief Set of physical device features to be enabled for this example (must be set in the derived constructor) */
 	VkPhysicalDeviceFeatures enabledFeatures{};
 	/** @brief Set of device extensions to be enabled for this example (must be set in the derived constructor) */
-	std::vector<const char*> enabledDeviceExtensions;
-	std::vector<const char*> enabledInstanceExtensions;
+	std::vector<const char*> enabledDeviceExtensions{ VK_KHR_MAINTENANCE3_EXTENSION_NAME,
+		VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
+		VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+		VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
+		VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+		VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+		VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
+		VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME };
+	std::vector<const char*> enabledInstanceExtensions{ VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME };
 	/** @brief Optional pNext structure for passing extension structures to device creation */
 	void* deviceCreatepNextChain = nullptr;
 	/** @brief Logical device, application's view of the physical device (GPU) */
@@ -271,7 +278,7 @@ private:
 	float frameTimer = 1.0f;
 
 	/** @brief Encapsulated physical and logical vulkan device */
-	vks::VulkanDevice* vulkanDevice;
+	std::unique_ptr<vks::VulkanDevice> vulkanDevice;
 
 	/** @brief Example settings that can be changed e.g. by command line arguments */
 	struct Settings {

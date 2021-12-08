@@ -34,6 +34,6 @@ private:
 	VkDevice m_device;
 	PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = VK_NULL_HANDLE;
 	PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT = VK_NULL_HANDLE;
-	VkDebugUtilsMessengerEXT debugUtilsMessenger;
+	VkDebugUtilsMessengerEXT debugUtilsMessenger = VK_NULL_HANDLE;
 	PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT = VK_NULL_HANDLE;
 };

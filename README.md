@@ -19,5 +19,4 @@ vulkan_pathtracer.exe -scene data\dragon.test
 ```
 
 # Hotkeys:
-F1 - save image to `<name-of-scene>.png` located near executable
-There is the FPS camera controlled by arrows
+F1 - save image to `<name-of-scene>.png` located near executable. There is the FPS camera controlled by arrows.
